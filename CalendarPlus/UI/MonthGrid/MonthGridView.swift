@@ -2,6 +2,7 @@ import AppKit
 
 @MainActor
 final class MonthGridView: NSView {
+    private let holidayDateMatcher = HolidayDateMatcher()
     private let refreshButton = NSButton(title: "刷新", target: nil, action: nil)
     private let messageLabel = NSTextField(labelWithString: "")
     private var viewModel: CalendarViewModel?
@@ -41,5 +42,6 @@ final class MonthGridView: NSView {
     private func render() {
         refreshButton.isEnabled = viewModel?.isRefreshEnabled ?? true
         messageLabel.stringValue = viewModel?.message ?? ""
+        _ = holidayDateMatcher
     }
 }
