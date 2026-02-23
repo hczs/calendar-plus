@@ -15,10 +15,14 @@ final class HolidayService {
     }
 
     func refresh(year: Int) async throws -> [HolidayRecord] {
-        let json = try await apiClient.fetchHolidays(year: year)
-        let data = Data(json.utf8)
-        let records = try JSONDecoder().decode([HolidayRecord].self, from: data)
-        try cacheStore.save(records: records, year: year)
-        return records
+        do {
+            let json = try await apiClient.fetchHolidays(year: year)
+            let data = Data(json.utf8)
+            let records = try JSONDecoder().decode([HolidayRecord].self, from: data)
+            try cacheStore.save(records: records, year: year)
+            return records
+        } catch {
+            throw error
+        }
     }
 }
