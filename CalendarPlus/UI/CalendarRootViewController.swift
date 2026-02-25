@@ -3,18 +3,26 @@ import AppKit
 @MainActor
 protocol HolidayRefreshing {
     func refresh(year: Int) async throws -> [HolidayRecord]
+    func loadCached(year: Int) -> [HolidayRecord]
 }
 
 extension HolidayService: HolidayRefreshing {}
+
+extension HolidayRefreshing {
+    func loadCached(year: Int) -> [HolidayRecord] { [] }
+}
 
 @MainActor
 final class CalendarViewModel {
     private let service: HolidayRefreshing
     private(set) var isRefreshEnabled = true
     private(set) var message: String?
+    private(set) var holidayRecords: [HolidayRecord] = []
 
     init(service: HolidayRefreshing) {
         self.service = service
+        let year = Calendar.current.component(.year, from: Date())
+        self.holidayRecords = service.loadCached(year: year)
     }
 
     func refreshTapped() async {
@@ -23,7 +31,7 @@ final class CalendarViewModel {
 
         do {
             let year = Calendar.current.component(.year, from: Date())
-            _ = try await service.refresh(year: year)
+            holidayRecords = try await service.refresh(year: year)
             message = "已更新"
         } catch {
             message = "更新失败"
@@ -47,7 +55,7 @@ final class CalendarRootViewController: NSViewController {
     }
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 380))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 460))
     }
 
     override func viewDidLoad() {
@@ -60,6 +68,12 @@ final class CalendarRootViewController: NSViewController {
             let vm = CalendarViewModel(service: holidayService)
             viewModel = vm
             monthGridView.bind(viewModel: vm)
+            if vm.holidayRecords.isEmpty {
+                Task { [weak self] in
+                    await vm.refreshTapped()
+                    self?.monthGridView.bind(viewModel: vm)
+                }
+            }
         }
     }
 }

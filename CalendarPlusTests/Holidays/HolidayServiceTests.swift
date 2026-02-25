@@ -11,6 +11,22 @@ final class HolidayServiceTests: XCTestCase {
         XCTAssertEqual(records.first?.date, "2026-02-17")
         XCTAssertEqual(records.first?.isHoliday, true)
     }
+
+    func test_refresh_parses_timor_api_shape() async throws {
+        let client = MockHolidayAPIClient(responseJSON: """
+        {
+          "code": 0,
+          "holiday": {
+            "2026-02-17": {"holiday": true, "name": "春节"},
+            "2026-02-18": {"holiday": false, "name": null}
+          }
+        }
+        """)
+        let service = HolidayService(apiClient: client, cacheStore: MockHolidayCacheStore())
+        let records = try await service.refresh(year: 2026)
+        XCTAssertEqual(records.count, 2)
+        XCTAssertEqual(records.first(where: { $0.date == "2026-02-17" })?.isHoliday, true)
+    }
 }
 
 private struct MockHolidayAPIClient: HolidayAPIClient {

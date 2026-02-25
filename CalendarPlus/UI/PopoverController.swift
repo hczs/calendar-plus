@@ -5,7 +5,11 @@ final class PopoverController {
     private let popover = NSPopover()
 
     init() {
-        popover.contentViewController = CalendarRootViewController()
+        let service = HolidayService(
+            apiClient: URLSessionHolidayAPIClient(),
+            cacheStore: HolidayCacheStore()
+        )
+        popover.contentViewController = CalendarRootViewController(holidayService: service)
         popover.behavior = .transient
     }
 

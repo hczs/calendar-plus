@@ -12,3 +12,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         StatusBarController()
     }
 }
+
+@MainActor
+public enum CalendarPlusLauncher {
+    private static var retainedDelegate: AppDelegate?
+
+    public static func run() {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.accessory)
+
+        let delegate = AppDelegate()
+        retainedDelegate = delegate
+        app.delegate = delegate
+        app.run()
+    }
+}
