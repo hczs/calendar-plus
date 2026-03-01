@@ -22,6 +22,7 @@ final class MonthGridView: NSView {
     private var viewModel: CalendarViewModel?
     private var markerByDate: [String: DayMarkerType] = [:]
     private var displayedMonthDate = Date()
+    var onSettingsTapped: (() -> Void)?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -59,6 +60,8 @@ final class MonthGridView: NSView {
 
         settingsButton.bezelStyle = .texturedRounded
         settingsButton.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
+        settingsButton.target = self
+        settingsButton.action = #selector(settingsTapped)
         footerView.addSubview(settingsButton)
 
         buildStaticCalendar()
@@ -72,6 +75,7 @@ final class MonthGridView: NSView {
 
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
+        applyDayStyles()
         applyThemeAndRender()
     }
 
@@ -116,6 +120,10 @@ final class MonthGridView: NSView {
             await viewModel.refreshTapped()
             render()
         }
+    }
+
+    @objc private func settingsTapped() {
+        onSettingsTapped?()
     }
 
     private func buildStaticCalendar() {
@@ -297,6 +305,10 @@ final class MonthGridView: NSView {
 
     func cornerTagTextForTest(day: Int) -> String {
         dayCellByDay[day]?.debugCornerTagText ?? ""
+    }
+
+    func dayNumberColorForTest(day: Int) -> NSColor? {
+        dayCellByDay[day]?.debugNumberColor
     }
 
     func setDisplayedMonthForTest(_ date: Date) {

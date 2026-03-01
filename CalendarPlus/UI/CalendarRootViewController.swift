@@ -42,10 +42,14 @@ final class CalendarViewModel {
 final class CalendarRootViewController: NSViewController {
     private let monthGridView = MonthGridView(frame: .zero)
     private let holidayService: HolidayService?
+    private let settingsStore: SettingsStore
     private var viewModel: CalendarViewModel?
+    private var settingsViewController: SettingsViewController?
+    private var isShowingSettings = false
 
-    init(holidayService: HolidayService? = nil) {
+    init(holidayService: HolidayService? = nil, settingsStore: SettingsStore = SettingsStore()) {
         self.holidayService = holidayService
+        self.settingsStore = settingsStore
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -63,6 +67,10 @@ final class CalendarRootViewController: NSViewController {
         monthGridView.frame = view.bounds
         monthGridView.autoresizingMask = [.width, .height]
         view.addSubview(monthGridView)
+        monthGridView.onSettingsTapped = { [weak self] in
+            self?.showSettingsPage()
+        }
+        applyTheme()
 
         if let holidayService {
             let vm = CalendarViewModel(service: holidayService)
@@ -75,5 +83,70 @@ final class CalendarRootViewController: NSViewController {
                 }
             }
         }
+    }
+
+    private func showSettingsPage() {
+        if settingsViewController == nil {
+            let vc = SettingsViewController(store: settingsStore)
+            vc.onBackTapped = { [weak self] in
+                self?.showCalendarPage()
+            }
+            vc.onThemeChanged = { [weak self] _ in
+                self?.applyTheme()
+                DispatchQueue.main.async { [weak self] in
+                    self?.settingsViewController?.refreshTheme()
+                }
+            }
+            settingsViewController = vc
+        }
+
+        guard let settingsVC = settingsViewController, !isShowingSettings else { return }
+        addChild(settingsVC)
+        settingsVC.view.frame = view.bounds
+        settingsVC.view.autoresizingMask = [.width, .height]
+        view.addSubview(settingsVC.view)
+        monthGridView.isHidden = true
+        isShowingSettings = true
+    }
+
+    private func showCalendarPage() {
+        guard let settingsVC = settingsViewController, isShowingSettings else { return }
+        settingsVC.view.removeFromSuperview()
+        settingsVC.removeFromParent()
+        monthGridView.isHidden = false
+        isShowingSettings = false
+    }
+
+    private func applyTheme() {
+        let appearance: NSAppearance?
+        switch settingsStore.themeMode {
+        case .system:
+            appearance = nil
+        case .light:
+            appearance = NSAppearance(named: .aqua)
+        case .dark:
+            appearance = NSAppearance(named: .darkAqua)
+        }
+
+        view.appearance = appearance
+        monthGridView.appearance = appearance
+        settingsViewController?.view.appearance = appearance
+    }
+
+    var isShowingSettingsForTest: Bool {
+        isShowingSettings
+    }
+
+    func showSettingsForTest() {
+        showSettingsPage()
+    }
+
+    func selectThemeForTest(_ mode: ThemeMode) {
+        showSettingsPage()
+        settingsViewController?.selectThemeForTest(mode)
+    }
+
+    var appearanceNameForTest: NSAppearance.Name? {
+        view.appearance?.name
     }
 }

@@ -16,6 +16,21 @@ final class MonthGridViewRenderTests: XCTestCase {
         return 1
     }
 
+    private func assertColorClose(_ lhs: NSColor?, _ rhs: NSColor?, file: StaticString = #filePath, line: UInt = #line) {
+        guard
+            let lhs = lhs?.usingColorSpace(.sRGB),
+            let rhs = rhs?.usingColorSpace(.sRGB)
+        else {
+            XCTFail("颜色为空或无法转换到 sRGB", file: file, line: line)
+            return
+        }
+
+        XCTAssertEqual(lhs.redComponent, rhs.redComponent, accuracy: 0.01, file: file, line: line)
+        XCTAssertEqual(lhs.greenComponent, rhs.greenComponent, accuracy: 0.01, file: file, line: line)
+        XCTAssertEqual(lhs.blueComponent, rhs.blueComponent, accuracy: 0.01, file: file, line: line)
+        XCTAssertEqual(lhs.alphaComponent, rhs.alphaComponent, accuracy: 0.01, file: file, line: line)
+    }
+
     @MainActor
     func test_month_grid_creates_day_labels_for_current_month() {
         let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 380))
@@ -92,5 +107,27 @@ final class MonthGridViewRenderTests: XCTestCase {
 
         XCTAssertFalse(sut.dayLabelTextForTest(day: tuesdayDay).contains("[W]"))
         XCTAssertTrue(sut.cornerTagTextForTest(day: tuesdayDay).isEmpty)
+    }
+
+    @MainActor
+    func test_theme_switch_recolors_existing_day_numbers() {
+        let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 420, height: 520))
+        let weekdayDay = currentMonthDay(matching: 3)
+
+        sut.appearance = NSAppearance(named: .darkAqua)
+        sut.setDisplayedMonthForTest(Date())
+        sut.layoutSubtreeIfNeeded()
+
+        let darkColor = sut.dayNumberColorForTest(day: weekdayDay)
+        let expectedDark = CalendarTheme.current(for: NSAppearance(named: .darkAqua)).dayText
+        assertColorClose(darkColor, expectedDark)
+
+        sut.appearance = NSAppearance(named: .aqua)
+        sut.viewDidChangeEffectiveAppearance()
+        sut.layoutSubtreeIfNeeded()
+
+        let lightColor = sut.dayNumberColorForTest(day: weekdayDay)
+        let expectedLight = CalendarTheme.current(for: NSAppearance(named: .aqua)).dayText
+        assertColorClose(lightColor, expectedLight)
     }
 }
