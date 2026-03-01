@@ -1,1 +1,10 @@
 .worktrees/
+
+# SwiftPM build artifacts
+.build/
+.swiftpm/
+
+# Local editor/system files
+.DS_Store
+.vscode/
+.idea/
