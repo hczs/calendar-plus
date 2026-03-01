@@ -3,6 +3,7 @@
 # SwiftPM build artifacts
 .build/
 .swiftpm/
+dist/
 
 # Local editor/system files
 .DS_Store
