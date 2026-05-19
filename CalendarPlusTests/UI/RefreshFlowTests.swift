@@ -9,6 +9,22 @@ final class RefreshFlowTests: XCTestCase {
         await vm.refreshTapped()
         XCTAssertTrue(vm.isRefreshEnabled)
     }
+
+    @MainActor
+    func test_month_grid_shows_refresh_message_from_view_model() async {
+        let service = ImmediateHolidayService()
+        let vm = CalendarViewModel(service: service)
+        let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 380))
+        vm.onStateChanged = { [weak sut, weak vm] in
+            guard let sut, let vm else { return }
+            sut.bind(viewModel: vm)
+        }
+        sut.bind(viewModel: vm)
+
+        await vm.refreshTapped()
+
+        XCTAssertEqual(sut.statusMessageForTest, "已更新")
+    }
 }
 
 @MainActor
@@ -17,4 +33,15 @@ private struct DelayedHolidayService: HolidayRefreshing {
         try await Task.sleep(nanoseconds: 10_000_000)
         return []
     }
+
+    func loadCached(year: Int) -> [HolidayRecord] { [] }
+}
+
+@MainActor
+private struct ImmediateHolidayService: HolidayRefreshing {
+    func refresh(year: Int) async throws -> [HolidayRecord] {
+        [HolidayRecord(date: "\(year)-01-01", isHoliday: true, name: nil)]
+    }
+
+    func loadCached(year: Int) -> [HolidayRecord] { [] }
 }

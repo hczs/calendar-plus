@@ -25,13 +25,20 @@ final class HolidayService {
         (try? cacheStore.load(year: year)) ?? []
     }
 
+    private enum HolidayParseError: Error {
+        case unsupportedFormat
+    }
+
     private func parseRecords(json: String, year: Int) throws -> [HolidayRecord] {
         let data = Data(json.utf8)
-        if let direct = try? JSONDecoder().decode([HolidayRecord].self, from: data) {
+        let decoder = JSONDecoder()
+        if let direct = try? decoder.decode([HolidayRecord].self, from: data), !direct.isEmpty {
             return direct
         }
 
-        let timor = try JSONDecoder().decode(TimorResponse.self, from: data)
+        guard let timor = try? decoder.decode(TimorResponse.self, from: data), !timor.holiday.isEmpty else {
+            throw HolidayParseError.unsupportedFormat
+        }
         return timor.holiday.map { key, value in
             HolidayRecord(
                 date: normalizedDateString(key, year: year),

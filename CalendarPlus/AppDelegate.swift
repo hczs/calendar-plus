@@ -7,10 +7,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusBarController = StatusBarController()
     }
-
-    func makeStatusBarControllerForTest() -> StatusBarController {
-        StatusBarController()
-    }
 }
 
 @MainActor

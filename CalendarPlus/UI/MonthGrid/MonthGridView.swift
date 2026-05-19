@@ -2,67 +2,76 @@ import AppKit
 
 @MainActor
 final class MonthGridView: NSView {
-    private let holidayDateMatcher = HolidayDateMatcher()
+    private enum Layout {
+        static let todayHeroHeight: CGFloat = 60
+        static let toolbarHeight: CGFloat = 44
+        static let statusHeight: CGFloat = 18
+        static let horizontalPadding: CGFloat = 12
+        static let weekdayRowHeight: CGFloat = 18
+        static let weekdayGapBelowToolbar: CGFloat = 6
+        static let gridBottomInset: CGFloat = 10
+        static let minCellSize: CGFloat = 36
+        static let minGridHeight: CGFloat = 180
+    }
 
-    private let cardView = NSView(frame: .zero)
-    private let headerView = NSView(frame: .zero)
-    private let footerView = NSView(frame: .zero)
+    private let holidayDateMatcher = HolidayDateMatcher()
+    private let calendar = CalendarGregorian.shanghai
+
+    private static let monthTitleFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.timeZone = CalendarGregorian.shanghai.timeZone
+        formatter.dateFormat = "yyyy年M月"
+        return formatter
+    }()
+
+    private let todayHeroView = TodayHeroView(frame: .zero)
+    private let toolbarView = NSView(frame: .zero)
 
     private let monthTitleLabel = NSTextField(labelWithString: "")
-    private let prevButton = NSButton(title: "", target: nil, action: nil)
-    private let nextButton = NSButton(title: "", target: nil, action: nil)
-
-    private let refreshButton = NSButton(title: "", target: nil, action: nil)
-    private let settingsButton = NSButton(title: "", target: nil, action: nil)
+    private let statusMessageLabel = NSTextField(labelWithString: "")
+    private let prevButton = NSButton(frame: .zero)
+    private let nextButton = NSButton(frame: .zero)
+    private let refreshButton = NSButton(frame: .zero)
+    private let settingsButton = NSButton(frame: .zero)
 
     private var weekdayLabels: [NSTextField] = []
     private var dayCells: [StyledDayCellView] = []
     private var dayCellByDay: [Int: StyledDayCellView] = [:]
 
     private var viewModel: CalendarViewModel?
-    private var markerByDate: [String: DayMarkerType] = [:]
+    private var testHolidayRecords: [HolidayRecord]?
     private var displayedMonthDate = Date()
+
     var onSettingsTapped: (() -> Void)?
+    var onDisplayedMonthChanged: ((Date) -> Void)?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
 
-        cardView.wantsLayer = true
-        cardView.layer?.cornerRadius = 14
-        addSubview(cardView)
+        addSubview(todayHeroView)
 
-        headerView.wantsLayer = true
-        cardView.addSubview(headerView)
-        footerView.wantsLayer = true
-        cardView.addSubview(footerView)
+        toolbarView.wantsLayer = true
+        addSubview(toolbarView)
 
-        monthTitleLabel.font = .systemFont(ofSize: 16, weight: .bold)
-        headerView.addSubview(monthTitleLabel)
+        monthTitleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        monthTitleLabel.alignment = .center
+        toolbarView.addSubview(monthTitleLabel)
 
-        prevButton.bezelStyle = .texturedRounded
-        prevButton.title = "‹"
-        prevButton.target = self
-        prevButton.action = #selector(showPreviousMonth)
-        headerView.addSubview(prevButton)
+        statusMessageLabel.font = .systemFont(ofSize: 11)
+        statusMessageLabel.lineBreakMode = .byTruncatingTail
+        addSubview(statusMessageLabel)
 
-        nextButton.bezelStyle = .texturedRounded
-        nextButton.title = "›"
-        nextButton.target = self
-        nextButton.action = #selector(showNextMonth)
-        headerView.addSubview(nextButton)
+        configureIconButton(prevButton, symbol: "chevron.left", label: "上个月", action: #selector(showPreviousMonth))
+        configureIconButton(nextButton, symbol: "chevron.right", label: "下个月", action: #selector(showNextMonth))
+        configureIconButton(refreshButton, symbol: "arrow.clockwise", label: "刷新节假日", action: #selector(refreshTapped))
+        configureIconButton(settingsButton, symbol: "gearshape", label: "打开设置", action: #selector(settingsTapped))
 
-        refreshButton.bezelStyle = .texturedRounded
-        refreshButton.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: nil)
-        refreshButton.target = self
-        refreshButton.action = #selector(refreshTapped)
-        footerView.addSubview(refreshButton)
-
-        settingsButton.bezelStyle = .texturedRounded
-        settingsButton.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
-        settingsButton.target = self
-        settingsButton.action = #selector(settingsTapped)
-        footerView.addSubview(settingsButton)
+        toolbarView.addSubview(prevButton)
+        toolbarView.addSubview(nextButton)
+        toolbarView.addSubview(refreshButton)
+        toolbarView.addSubview(settingsButton)
 
         buildStaticCalendar()
         render()
@@ -75,26 +84,53 @@ final class MonthGridView: NSView {
 
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
-        applyDayStyles()
-        applyThemeAndRender()
+        render()
     }
 
     override func layout() {
         super.layout()
 
-        cardView.frame = NSRect(x: 8, y: 8, width: bounds.width - 16, height: bounds.height - 16)
-        headerView.frame = NSRect(x: 0, y: cardView.bounds.height - 60, width: cardView.bounds.width, height: 60)
-        footerView.frame = NSRect(x: 0, y: 0, width: cardView.bounds.width, height: 46)
-        cardView.addSubview(footerView, positioned: .above, relativeTo: nil)
+        let statusVisible = !statusMessageLabel.isHidden
+        let statusBlockHeight = statusVisible ? Layout.statusHeight : 0
 
-        monthTitleLabel.frame = NSRect(x: 18, y: 20, width: 160, height: 24)
-        prevButton.frame = NSRect(x: cardView.bounds.width - 80, y: 20, width: 28, height: 24)
-        nextButton.frame = NSRect(x: cardView.bounds.width - 48, y: 20, width: 28, height: 24)
+        todayHeroView.frame = NSRect(
+            x: 0,
+            y: bounds.height - Layout.todayHeroHeight,
+            width: bounds.width,
+            height: Layout.todayHeroHeight
+        )
 
-        settingsButton.frame = NSRect(x: cardView.bounds.width - 74, y: 11, width: 28, height: 24)
-        refreshButton.frame = NSRect(x: cardView.bounds.width - 42, y: 11, width: 28, height: 24)
+        toolbarView.frame = NSRect(
+            x: 0,
+            y: todayHeroView.frame.minY - Layout.toolbarHeight,
+            width: bounds.width,
+            height: Layout.toolbarHeight
+        )
 
-        layoutCalendar()
+        prevButton.frame = NSRect(x: Layout.horizontalPadding, y: 8, width: 30, height: 28)
+        nextButton.frame = NSRect(x: Layout.horizontalPadding + 34, y: 8, width: 30, height: 28)
+        settingsButton.frame = NSRect(x: toolbarView.bounds.width - Layout.horizontalPadding - 30, y: 8, width: 30, height: 28)
+        refreshButton.frame = NSRect(x: toolbarView.bounds.width - Layout.horizontalPadding - 64, y: 8, width: 30, height: 28)
+
+        let titleX = prevButton.frame.maxX + 8
+        let titleMaxX = refreshButton.frame.minX - 8
+        monthTitleLabel.frame = NSRect(
+            x: titleX,
+            y: 10,
+            width: max(titleMaxX - titleX, 80),
+            height: 24
+        )
+
+        if statusVisible {
+            statusMessageLabel.frame = NSRect(
+                x: Layout.horizontalPadding,
+                y: toolbarView.frame.minY - statusBlockHeight,
+                width: bounds.width - Layout.horizontalPadding * 2,
+                height: Layout.statusHeight
+            )
+        }
+
+        layoutCalendar(statusBottomY: toolbarView.frame.minY - statusBlockHeight)
     }
 
     func bind(viewModel: CalendarViewModel) {
@@ -103,14 +139,16 @@ final class MonthGridView: NSView {
     }
 
     @objc private func showPreviousMonth() {
-        guard let next = Calendar.current.date(byAdding: .month, value: -1, to: displayedMonthDate) else { return }
+        guard let next = calendar.date(byAdding: .month, value: -1, to: displayedMonthDate) else { return }
         displayedMonthDate = next
+        onDisplayedMonthChanged?(displayedMonthDate)
         render()
     }
 
     @objc private func showNextMonth() {
-        guard let next = Calendar.current.date(byAdding: .month, value: 1, to: displayedMonthDate) else { return }
+        guard let next = calendar.date(byAdding: .month, value: 1, to: displayedMonthDate) else { return }
         displayedMonthDate = next
+        onDisplayedMonthChanged?(displayedMonthDate)
         render()
     }
 
@@ -126,38 +164,52 @@ final class MonthGridView: NSView {
         onSettingsTapped?()
     }
 
+    private func configureIconButton(_ button: NSButton, symbol: String, label: String, action: Selector) {
+        button.bezelStyle = .accessoryBar
+        button.isBordered = false
+        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
+        button.imagePosition = .imageOnly
+        button.toolTip = label
+        button.target = self
+        button.action = action
+    }
+
     private func buildStaticCalendar() {
         let weekdays = ["一", "二", "三", "四", "五", "六", "日"]
         weekdayLabels = weekdays.map { text in
             let label = NSTextField(labelWithString: text)
             label.alignment = .center
-            label.font = .systemFont(ofSize: 12, weight: .semibold)
-            cardView.addSubview(label)
+            label.font = .systemFont(ofSize: 11, weight: .semibold)
+            addSubview(label)
             return label
         }
 
         for _ in 0..<42 {
             let cell = StyledDayCellView(frame: .zero)
-            cardView.addSubview(cell)
+            addSubview(cell)
             dayCells.append(cell)
         }
     }
 
-    private func layoutCalendar() {
-        let horizontalPadding: CGFloat = 14
-        let weekdayTopY = headerView.frame.minY - 30
-        let gridTopY = weekdayTopY - 8
-        let gridBottomY = footerView.frame.maxY + 8
-        let usableWidth = cardView.bounds.width - horizontalPadding * 2
+    private func layoutCalendar(statusBottomY: CGFloat) {
+        let weekdayTopY = statusBottomY - Layout.weekdayGapBelowToolbar - Layout.weekdayRowHeight
+        let gridTopY = weekdayTopY - Layout.weekdayRowHeight
+        let gridBottomY = Layout.gridBottomInset
+        let usableWidth = bounds.width - Layout.horizontalPadding * 2
         let colWidth = usableWidth / 7
-        let availableGridHeight = max(gridTopY - gridBottomY, 180)
+        let availableGridHeight = max(gridTopY - gridBottomY, Layout.minGridHeight)
         let weeks = max(weeksInDisplayedMonth(), 1)
-        let rowHeight = max(floor(availableGridHeight / CGFloat(weeks)), 38)
-        let cellWidth = max(colWidth - 8, 38)
-        let cellHeight = max(rowHeight - 6, 38)
+        let rowHeight = max(floor(availableGridHeight / CGFloat(weeks)), Layout.minCellSize)
+        let cellWidth = max(colWidth - 6, Layout.minCellSize)
+        let cellHeight = max(rowHeight - 4, Layout.minCellSize)
 
         for (index, label) in weekdayLabels.enumerated() {
-            label.frame = NSRect(x: horizontalPadding + CGFloat(index) * colWidth, y: weekdayTopY, width: colWidth, height: 18)
+            label.frame = NSRect(
+                x: Layout.horizontalPadding + CGFloat(index) * colWidth,
+                y: weekdayTopY,
+                width: colWidth,
+                height: Layout.weekdayRowHeight
+            )
         }
 
         for (index, cell) in dayCells.enumerated() {
@@ -169,7 +221,7 @@ final class MonthGridView: NSView {
             }
             cell.isHidden = false
             cell.frame = NSRect(
-                x: horizontalPadding + CGFloat(col) * colWidth + (colWidth - cellWidth) / 2,
+                x: Layout.horizontalPadding + CGFloat(col) * colWidth + (colWidth - cellWidth) / 2,
                 y: gridTopY - CGFloat(row + 1) * rowHeight,
                 width: cellWidth,
                 height: cellHeight
@@ -178,7 +230,6 @@ final class MonthGridView: NSView {
     }
 
     private func weeksInDisplayedMonth() -> Int {
-        let calendar = Calendar(identifier: .gregorian)
         let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonthDate)) ?? displayedMonthDate
         let dayCount = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
         let weekday = calendar.component(.weekday, from: monthStart)
@@ -186,29 +237,48 @@ final class MonthGridView: NSView {
         return Int(ceil(Double(mondayFirstOffset + dayCount) / 7.0))
     }
 
-    private func render() {
-        refreshButton.isEnabled = viewModel?.isRefreshEnabled ?? true
-        markerByDate = (viewModel?.holidayRecords ?? []).reduce(into: [:]) { partial, record in
-            partial[record.date] = record.isHoliday ? .holiday : .makeupWorkday
-        }
-
-        let titleFormatter = DateFormatter()
-        titleFormatter.locale = Locale(identifier: "zh_CN")
-        titleFormatter.dateFormat = "yyyy年M月"
-        monthTitleLabel.stringValue = titleFormatter.string(from: displayedMonthDate)
-
-        applyDayStyles()
-        applyThemeAndRender()
-        needsLayout = true
-
-        _ = holidayDateMatcher
+    private var holidayRecordsForDisplay: [HolidayRecord] {
+        testHolidayRecords ?? viewModel?.holidayRecords ?? []
     }
 
-    private func applyDayStyles() {
-        dayCellByDay.removeAll()
+    private func render() {
+        refreshButton.isEnabled = viewModel?.isRefreshEnabled ?? true
 
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .current
+        let message = viewModel?.message ?? ""
+        statusMessageLabel.stringValue = message
+        statusMessageLabel.isHidden = message.isEmpty
+
+        monthTitleLabel.stringValue = Self.monthTitleFormatter.string(from: displayedMonthDate)
+
+        applyAppearance()
+        needsLayout = true
+    }
+
+    private func applyAppearance() {
+        let theme = CalendarTheme.current(for: effectiveAppearance)
+        let records = holidayRecordsForDisplay
+
+        layer?.backgroundColor = theme.background.cgColor
+        toolbarView.layer?.backgroundColor = theme.background.cgColor
+
+        todayHeroView.configure(theme: theme, holidayRecords: records)
+
+        monthTitleLabel.textColor = theme.headerText
+        statusMessageLabel.textColor = theme.weekText
+
+        for button in [prevButton, nextButton, settingsButton, refreshButton] {
+            button.contentTintColor = theme.secondaryIcon
+        }
+
+        for (index, label) in weekdayLabels.enumerated() {
+            label.textColor = (index == 5 || index == 6) ? theme.primary : theme.weekText
+        }
+
+        applyDayCells(theme: theme)
+    }
+
+    private func applyDayCells(theme: CalendarTheme) {
+        dayCellByDay.removeAll()
 
         let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonthDate)) ?? displayedMonthDate
         let dayCount = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
@@ -217,8 +287,7 @@ final class MonthGridView: NSView {
         let mondayFirstOffset = (weekday + 5) % 7
         let todayComps = calendar.dateComponents([.year, .month, .day], from: Date())
         let monthComps = calendar.dateComponents([.year, .month], from: monthStart)
-
-        let theme = CalendarTheme.current(for: effectiveAppearance)
+        let records = holidayRecordsForDisplay
 
         for index in 0..<dayCells.count {
             let slot = index - mondayFirstOffset + 1
@@ -237,13 +306,24 @@ final class MonthGridView: NSView {
 
             let col = index % 7
             let isWeekend = col == 5 || col == 6
-            let dateString = String(format: "%04d-%02d-%02d", monthComps.year ?? 1970, monthComps.month ?? 1, slot)
-            let currentDate = calendar.date(from: DateComponents(year: monthComps.year, month: monthComps.month, day: slot)) ?? monthStart
-            var markerType = markerByDate[dateString] ?? .none
+            let currentDate = calendar.date(from: DateComponents(
+                timeZone: calendar.timeZone,
+                year: monthComps.year,
+                month: monthComps.month,
+                day: slot
+            )) ?? monthStart
+
+            var markerType: DayMarkerType = .none
+            if let record = holidayDateMatcher.matchingRecord(for: currentDate, in: records) {
+                markerType = record.isHoliday ? .holiday : .makeupWorkday
+            }
             if markerType == .makeupWorkday && !isWeekend {
                 markerType = .none
             }
-            let isToday = todayComps.year == monthComps.year && todayComps.month == monthComps.month && todayComps.day == slot
+
+            let isToday = todayComps.year == monthComps.year
+                && todayComps.month == monthComps.month
+                && todayComps.day == slot
             let festivalText = CalendarAnnotations.festivalText(for: currentDate)
             let lunarText = CalendarAnnotations.lunarText(for: currentDate)
 
@@ -257,28 +337,6 @@ final class MonthGridView: NSView {
                 theme: theme
             )
             dayCellByDay[slot] = dayCells[index]
-        }
-    }
-
-    private func applyThemeAndRender() {
-        let theme = CalendarTheme.current(for: effectiveAppearance)
-
-        layer?.backgroundColor = theme.background.cgColor
-
-        cardView.layer?.backgroundColor = theme.cardBackground.cgColor
-        cardView.layer?.borderColor = theme.border.cgColor
-        cardView.layer?.borderWidth = 1
-
-        footerView.layer?.backgroundColor = theme.footerBackground.cgColor
-        monthTitleLabel.textColor = theme.headerText
-
-        prevButton.contentTintColor = theme.secondaryIcon
-        nextButton.contentTintColor = theme.secondaryIcon
-        settingsButton.contentTintColor = theme.secondaryIcon
-        refreshButton.contentTintColor = theme.secondaryIcon
-
-        for (index, label) in weekdayLabels.enumerated() {
-            label.textColor = (index == 5 || index == 6) ? theme.primary : theme.weekText
         }
     }
 
@@ -311,15 +369,26 @@ final class MonthGridView: NSView {
         dayCellByDay[day]?.debugNumberColor
     }
 
+    func holidayTintAppliedForTest(day: Int) -> Bool {
+        dayCellByDay[day]?.debugUsesHolidayTintForTest ?? false
+    }
+
+    var todayHeroPillTextForTest: String {
+        todayHeroView.pillTextForTest
+    }
+
+    var statusMessageForTest: String {
+        statusMessageLabel.stringValue
+    }
+
     func setDisplayedMonthForTest(_ date: Date) {
         displayedMonthDate = date
+        onDisplayedMonthChanged?(date)
         render()
     }
 
     func applyHolidayRecordsForTest(_ records: [HolidayRecord]) {
-        markerByDate = records.reduce(into: [:]) { partial, record in
-            partial[record.date] = record.isHoliday ? .holiday : .makeupWorkday
-        }
-        applyDayStyles()
+        testHolidayRecords = records
+        render()
     }
 }

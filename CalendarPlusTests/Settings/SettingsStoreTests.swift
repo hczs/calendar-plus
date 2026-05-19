@@ -17,4 +17,20 @@ final class SettingsStoreTests: XCTestCase {
         store.themeMode = .dark
         XCTAssertEqual(store.themeMode, .dark)
     }
+
+    func test_status_icon_mode_change_posts_notification() {
+        let defaults = UserDefaults(suiteName: "SettingsStoreNotificationTests")!
+        defaults.removePersistentDomain(forName: "SettingsStoreNotificationTests")
+        let store = SettingsStore(userDefaults: defaults)
+        let expectation = expectation(description: "settings changed")
+        let token = NotificationCenter.default.addObserver(
+            forName: .settingsStoreDidChange,
+            object: store,
+            queue: nil
+        ) { _ in expectation.fulfill() }
+
+        store.statusIconMode = .todayDate
+        wait(for: [expectation], timeout: 1)
+        NotificationCenter.default.removeObserver(token)
+    }
 }

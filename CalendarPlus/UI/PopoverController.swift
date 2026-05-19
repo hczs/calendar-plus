@@ -4,12 +4,15 @@ import AppKit
 final class PopoverController {
     private let popover = NSPopover()
 
-    init() {
+    init(settingsStore: SettingsStore) {
         let service = HolidayService(
             apiClient: URLSessionHolidayAPIClient(),
             cacheStore: HolidayCacheStore()
         )
-        popover.contentViewController = CalendarRootViewController(holidayService: service)
+        popover.contentViewController = CalendarRootViewController(
+            holidayService: service,
+            settingsStore: settingsStore
+        )
         popover.behavior = .transient
     }
 
