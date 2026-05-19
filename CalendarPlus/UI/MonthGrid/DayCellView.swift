@@ -3,16 +3,25 @@ import AppKit
 @MainActor
 final class StyledDayCellView: NSView {
     private enum Layout {
-        static let topInset: CGFloat = 4
-        static let numberHeight: CGFloat = 18
         static let detailHeight: CGFloat = 11
         static let lineGap: CGFloat = 2
         static let todayBorderWidth: CGFloat = 2
         static let todayBorderWidthOnMarker: CGFloat = 2.5
         static let cornerRadius: CGFloat = 10
-        static let badgeMinWidth: CGFloat = 14
-        static let badgeHeight: CGFloat = 12
-        static let badgeInset: CGFloat = 5
+        static let badgeMinWidth: CGFloat = 10
+        static let badgeHeight: CGFloat = 11
+        /// 角标底边落在公历数字自上 1/3 处的水平线（与数字右上错开叠放）
+        static let badgeAnchorFromNumberTop: CGFloat = 1.0 / 3.0
+        static let badgeOverlapIntoNumber: CGFloat = 2
+        static let numberHorizontalPadding: CGFloat = 2
+    }
+
+    private static func numberLineHeight(for font: NSFont) -> CGFloat {
+        ceil(font.ascender - font.descender + font.leading) + 2
+    }
+
+    private static func badgeExtensionAboveNumber(for numberLineHeight: CGFloat) -> CGFloat {
+        Layout.badgeHeight - numberLineHeight * Layout.badgeAnchorFromNumberTop
     }
 
     private static let accessibilityDateFormatter: DateFormatter = {
@@ -38,10 +47,14 @@ final class StyledDayCellView: NSView {
         super.init(frame: frameRect)
         wantsLayer = true
         layer?.cornerRadius = Layout.cornerRadius
-        layer?.masksToBounds = true
+        layer?.masksToBounds = false
 
         numberLabel.alignment = .center
         numberLabel.font = .systemFont(ofSize: 15, weight: .semibold)
+        if let cell = numberLabel.cell as? NSTextFieldCell {
+            cell.usesSingleLineMode = true
+            cell.lineBreakMode = .byClipping
+        }
         addSubview(numberLabel)
 
         detailLabel.alignment = .center
@@ -63,18 +76,39 @@ final class StyledDayCellView: NSView {
     override func layout() {
         super.layout()
 
-        let contentHeight = Layout.topInset + Layout.numberHeight + Layout.lineGap + Layout.detailHeight
-        let verticalPad = max(0, (bounds.height - contentHeight) / 2)
-        let detailY = verticalPad
-        let numberY = verticalPad + Layout.detailHeight + Layout.lineGap
-        numberLabel.frame = NSRect(x: 0, y: numberY, width: bounds.width, height: Layout.numberHeight)
+        let font = numberLabel.font ?? .systemFont(ofSize: 15, weight: .semibold)
+        let numberLineHeight = Self.numberLineHeight(for: font)
+        let showsBadge = !markerBadgeLabel.isHidden
+        let extensionAbove = showsBadge ? Self.badgeExtensionAboveNumber(for: numberLineHeight) : 0
+        let contentHeight = numberLineHeight + Layout.lineGap + Layout.detailHeight
+        let blockHeight = contentHeight + extensionAbove
+        let blockOriginY = (bounds.height - blockHeight) / 2
+
+        let detailY = blockOriginY
+        let numberY = blockOriginY + Layout.detailHeight + Layout.lineGap
         detailLabel.frame = NSRect(x: 0, y: detailY, width: bounds.width, height: Layout.detailHeight)
 
-        if !markerBadgeLabel.isHidden {
-            let badgeWidth = max(markerBadgeLabel.intrinsicContentSize.width + 2, Layout.badgeMinWidth)
+        let measuredNumberWidth = ceil((numberLabel.stringValue as NSString).size(
+            withAttributes: [.font: font]
+        ).width)
+        let numberSlotWidth = measuredNumberWidth + Layout.numberHorizontalPadding * 2
+        // 公历始终按格宽居中；角标挂在数字右上，占用加宽后的格子右侧空间，不参与居中计算
+        let numberX = (bounds.width - numberSlotWidth) / 2
+
+        numberLabel.frame = NSRect(
+            x: numberX,
+            y: numberY,
+            width: numberSlotWidth,
+            height: numberLineHeight
+        )
+
+        if showsBadge {
+            let badgeWidth = max(ceil(markerBadgeLabel.intrinsicContentSize.width), Layout.badgeMinWidth)
+            let numberTop = numberY + numberLineHeight
+            let badgeBottomY = numberTop - numberLineHeight * Layout.badgeAnchorFromNumberTop
             markerBadgeLabel.frame = NSRect(
-                x: bounds.width - badgeWidth - Layout.badgeInset,
-                y: bounds.height - Layout.badgeHeight - Layout.badgeInset,
+                x: numberX + numberSlotWidth - Layout.badgeOverlapIntoNumber,
+                y: badgeBottomY,
                 width: badgeWidth,
                 height: Layout.badgeHeight
             )
@@ -157,10 +191,7 @@ final class StyledDayCellView: NSView {
         }
 
         updateAccessibility(date: date, isToday: isToday, markerType: markerType)
-        if !markerBadgeLabel.isHidden {
-            needsLayout = true
-            layoutSubtreeIfNeeded()
-        }
+        needsLayout = true
     }
 
     private func updateAccessibility(date: Date, isToday: Bool, markerType: DayMarkerType) {

@@ -35,7 +35,7 @@ final class SettingsViewController: NSViewController {
     }
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 360, height: 420))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 432, height: 420))
     }
 
     override func viewDidLoad() {

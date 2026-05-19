@@ -9,7 +9,9 @@ final class MonthGridView: NSView {
         static let weekdayRowHeight: CGFloat = 18
         static let weekdayGapBelowToolbar: CGFloat = 6
         static let gridBottomInset: CGFloat = 10
-        static let minCellSize: CGFloat = 36
+        static let minCellSize: CGFloat = 48
+        /// 相邻格子之间的缝隙，避免休班底色/今天描边连成一片
+        static let cellGap: CGFloat = 4
         static let minGridHeight: CGFloat = 180
     }
 
@@ -185,15 +187,17 @@ final class MonthGridView: NSView {
 
     private func layoutCalendar(statusBottomY: CGFloat) {
         let weekdayTopY = statusBottomY - Layout.weekdayGapBelowToolbar - Layout.weekdayRowHeight
-        let gridTopY = weekdayTopY - Layout.weekdayRowHeight
+        let gridTopY = weekdayTopY
         let gridBottomY = Layout.gridBottomInset
         let usableWidth = bounds.width - Layout.horizontalPadding * 2
         let colWidth = usableWidth / 7
         let availableGridHeight = max(gridTopY - gridBottomY, Layout.minGridHeight)
         let weeks = max(weeksInDisplayedMonth(), 1)
-        let rowHeight = max(floor(availableGridHeight / CGFloat(weeks)), Layout.minCellSize)
-        let cellWidth = max(colWidth - 6, Layout.minCellSize)
-        let cellHeight = max(rowHeight - 4, Layout.minCellSize)
+        let rowSlotHeight = max(floor(availableGridHeight / CGFloat(weeks)), Layout.minCellSize + Layout.cellGap)
+        // 格宽不得超过列宽减缝隙，否则相邻底色会重叠粘连
+        let cellWidth = colWidth - Layout.cellGap
+        let cellHeight = min(rowSlotHeight - Layout.cellGap, cellWidth + 6)
+        let cellXOffset = Layout.cellGap / 2
 
         for (index, label) in weekdayLabels.enumerated() {
             label.frame = NSRect(
@@ -212,9 +216,11 @@ final class MonthGridView: NSView {
                 continue
             }
             cell.isHidden = false
+            let rowBottomY = gridTopY - CGFloat(row + 1) * rowSlotHeight
+            let cellY = rowBottomY + (rowSlotHeight - cellHeight) / 2
             cell.frame = NSRect(
-                x: Layout.horizontalPadding + CGFloat(col) * colWidth + (colWidth - cellWidth) / 2,
-                y: gridTopY - CGFloat(row + 1) * rowHeight,
+                x: Layout.horizontalPadding + CGFloat(col) * colWidth + cellXOffset,
+                y: cellY,
                 width: cellWidth,
                 height: cellHeight
             )
