@@ -3,12 +3,22 @@ import AppKit
 @MainActor
 final class MonthGridView: NSView {
     private let holidayDateMatcher = HolidayDateMatcher()
+    private let calendar = CalendarGregorian.shanghai
+
+    private static let monthTitleFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.timeZone = CalendarGregorian.shanghai.timeZone
+        formatter.dateFormat = "yyyy年M月"
+        return formatter
+    }()
 
     private let cardView = NSView(frame: .zero)
     private let headerView = NSView(frame: .zero)
     private let footerView = NSView(frame: .zero)
 
     private let monthTitleLabel = NSTextField(labelWithString: "")
+    private let statusMessageLabel = NSTextField(labelWithString: "")
     private let prevButton = NSButton(title: "", target: nil, action: nil)
     private let nextButton = NSButton(title: "", target: nil, action: nil)
 
@@ -20,9 +30,10 @@ final class MonthGridView: NSView {
     private var dayCellByDay: [Int: StyledDayCellView] = [:]
 
     private var viewModel: CalendarViewModel?
-    private var markerByDate: [String: DayMarkerType] = [:]
+    private var testHolidayRecords: [HolidayRecord]?
     private var displayedMonthDate = Date()
     var onSettingsTapped: (() -> Void)?
+    var onDisplayedMonthChanged: ((Date) -> Void)?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -40,6 +51,10 @@ final class MonthGridView: NSView {
         monthTitleLabel.font = .systemFont(ofSize: 16, weight: .bold)
         headerView.addSubview(monthTitleLabel)
 
+        statusMessageLabel.font = .systemFont(ofSize: 11)
+        statusMessageLabel.lineBreakMode = .byTruncatingTail
+        footerView.addSubview(statusMessageLabel)
+
         prevButton.bezelStyle = .texturedRounded
         prevButton.title = "‹"
         prevButton.target = self
@@ -53,13 +68,13 @@ final class MonthGridView: NSView {
         headerView.addSubview(nextButton)
 
         refreshButton.bezelStyle = .texturedRounded
-        refreshButton.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: nil)
+        refreshButton.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "刷新节假日")
         refreshButton.target = self
         refreshButton.action = #selector(refreshTapped)
         footerView.addSubview(refreshButton)
 
         settingsButton.bezelStyle = .texturedRounded
-        settingsButton.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
+        settingsButton.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "打开设置")
         settingsButton.target = self
         settingsButton.action = #selector(settingsTapped)
         footerView.addSubview(settingsButton)
@@ -85,12 +100,12 @@ final class MonthGridView: NSView {
         cardView.frame = NSRect(x: 8, y: 8, width: bounds.width - 16, height: bounds.height - 16)
         headerView.frame = NSRect(x: 0, y: cardView.bounds.height - 60, width: cardView.bounds.width, height: 60)
         footerView.frame = NSRect(x: 0, y: 0, width: cardView.bounds.width, height: 46)
-        cardView.addSubview(footerView, positioned: .above, relativeTo: nil)
 
         monthTitleLabel.frame = NSRect(x: 18, y: 20, width: 160, height: 24)
         prevButton.frame = NSRect(x: cardView.bounds.width - 80, y: 20, width: 28, height: 24)
         nextButton.frame = NSRect(x: cardView.bounds.width - 48, y: 20, width: 28, height: 24)
 
+        statusMessageLabel.frame = NSRect(x: 14, y: 14, width: cardView.bounds.width - 108, height: 18)
         settingsButton.frame = NSRect(x: cardView.bounds.width - 74, y: 11, width: 28, height: 24)
         refreshButton.frame = NSRect(x: cardView.bounds.width - 42, y: 11, width: 28, height: 24)
 
@@ -103,14 +118,16 @@ final class MonthGridView: NSView {
     }
 
     @objc private func showPreviousMonth() {
-        guard let next = Calendar.current.date(byAdding: .month, value: -1, to: displayedMonthDate) else { return }
+        guard let next = calendar.date(byAdding: .month, value: -1, to: displayedMonthDate) else { return }
         displayedMonthDate = next
+        onDisplayedMonthChanged?(displayedMonthDate)
         render()
     }
 
     @objc private func showNextMonth() {
-        guard let next = Calendar.current.date(byAdding: .month, value: 1, to: displayedMonthDate) else { return }
+        guard let next = calendar.date(byAdding: .month, value: 1, to: displayedMonthDate) else { return }
         displayedMonthDate = next
+        onDisplayedMonthChanged?(displayedMonthDate)
         render()
     }
 
@@ -178,7 +195,6 @@ final class MonthGridView: NSView {
     }
 
     private func weeksInDisplayedMonth() -> Int {
-        let calendar = Calendar(identifier: .gregorian)
         let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonthDate)) ?? displayedMonthDate
         let dayCount = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
         let weekday = calendar.component(.weekday, from: monthStart)
@@ -186,29 +202,26 @@ final class MonthGridView: NSView {
         return Int(ceil(Double(mondayFirstOffset + dayCount) / 7.0))
     }
 
+    private var holidayRecordsForDisplay: [HolidayRecord] {
+        testHolidayRecords ?? viewModel?.holidayRecords ?? []
+    }
+
     private func render() {
         refreshButton.isEnabled = viewModel?.isRefreshEnabled ?? true
-        markerByDate = (viewModel?.holidayRecords ?? []).reduce(into: [:]) { partial, record in
-            partial[record.date] = record.isHoliday ? .holiday : .makeupWorkday
-        }
 
-        let titleFormatter = DateFormatter()
-        titleFormatter.locale = Locale(identifier: "zh_CN")
-        titleFormatter.dateFormat = "yyyy年M月"
-        monthTitleLabel.stringValue = titleFormatter.string(from: displayedMonthDate)
+        let message = viewModel?.message ?? ""
+        statusMessageLabel.stringValue = message
+        statusMessageLabel.isHidden = message.isEmpty
+
+        monthTitleLabel.stringValue = Self.monthTitleFormatter.string(from: displayedMonthDate)
 
         applyDayStyles()
         applyThemeAndRender()
         needsLayout = true
-
-        _ = holidayDateMatcher
     }
 
     private func applyDayStyles() {
         dayCellByDay.removeAll()
-
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .current
 
         let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonthDate)) ?? displayedMonthDate
         let dayCount = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
@@ -217,6 +230,7 @@ final class MonthGridView: NSView {
         let mondayFirstOffset = (weekday + 5) % 7
         let todayComps = calendar.dateComponents([.year, .month, .day], from: Date())
         let monthComps = calendar.dateComponents([.year, .month], from: monthStart)
+        let records = holidayRecordsForDisplay
 
         let theme = CalendarTheme.current(for: effectiveAppearance)
 
@@ -237,12 +251,21 @@ final class MonthGridView: NSView {
 
             let col = index % 7
             let isWeekend = col == 5 || col == 6
-            let dateString = String(format: "%04d-%02d-%02d", monthComps.year ?? 1970, monthComps.month ?? 1, slot)
-            let currentDate = calendar.date(from: DateComponents(year: monthComps.year, month: monthComps.month, day: slot)) ?? monthStart
-            var markerType = markerByDate[dateString] ?? .none
+            let currentDate = calendar.date(from: DateComponents(
+                timeZone: calendar.timeZone,
+                year: monthComps.year,
+                month: monthComps.month,
+                day: slot
+            )) ?? monthStart
+
+            var markerType: DayMarkerType = .none
+            if let record = holidayDateMatcher.matchingRecord(for: currentDate, in: records) {
+                markerType = record.isHoliday ? .holiday : .makeupWorkday
+            }
             if markerType == .makeupWorkday && !isWeekend {
                 markerType = .none
             }
+
             let isToday = todayComps.year == monthComps.year && todayComps.month == monthComps.month && todayComps.day == slot
             let festivalText = CalendarAnnotations.festivalText(for: currentDate)
             let lunarText = CalendarAnnotations.lunarText(for: currentDate)
@@ -271,6 +294,7 @@ final class MonthGridView: NSView {
 
         footerView.layer?.backgroundColor = theme.footerBackground.cgColor
         monthTitleLabel.textColor = theme.headerText
+        statusMessageLabel.textColor = theme.footerText
 
         prevButton.contentTintColor = theme.secondaryIcon
         nextButton.contentTintColor = theme.secondaryIcon
@@ -311,15 +335,19 @@ final class MonthGridView: NSView {
         dayCellByDay[day]?.debugNumberColor
     }
 
+    var statusMessageForTest: String {
+        statusMessageLabel.stringValue
+    }
+
     func setDisplayedMonthForTest(_ date: Date) {
         displayedMonthDate = date
+        onDisplayedMonthChanged?(date)
         render()
     }
 
     func applyHolidayRecordsForTest(_ records: [HolidayRecord]) {
-        markerByDate = records.reduce(into: [:]) { partial, record in
-            partial[record.date] = record.isHoliday ? .holiday : .makeupWorkday
-        }
+        testHolidayRecords = records
         applyDayStyles()
     }
+
 }

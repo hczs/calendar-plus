@@ -11,7 +11,8 @@ let package = Package(
     targets: [
         .target(
             name: "CalendarPlus",
-            path: "CalendarPlus"
+            path: "CalendarPlus",
+            exclude: ["Info.plist"]
         ),
         .executableTarget(
             name: "CalendarPlusApp",

@@ -27,6 +27,18 @@ final class HolidayServiceTests: XCTestCase {
         XCTAssertEqual(records.count, 2)
         XCTAssertEqual(records.first(where: { $0.date == "2026-02-17" })?.isHoliday, true)
     }
+
+    func test_refresh_throws_for_unsupported_json_shape() async {
+        let client = MockHolidayAPIClient(responseJSON: "{\"unexpected\":true}")
+        let service = HolidayService(apiClient: client, cacheStore: MockHolidayCacheStore())
+
+        do {
+            _ = try await service.refresh(year: 2026)
+            XCTFail("应抛出解析错误")
+        } catch {
+            XCTAssertNotNil(error)
+        }
+    }
 }
 
 private struct MockHolidayAPIClient: HolidayAPIClient {

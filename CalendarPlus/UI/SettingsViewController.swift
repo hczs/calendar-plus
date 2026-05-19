@@ -6,6 +6,8 @@ final class SettingsViewController: NSViewController {
     private let titleLabel = NSTextField(labelWithString: "设置")
     private let themeLabel = NSTextField(labelWithString: "主题")
     private let themeControl = NSSegmentedControl(labels: ["系统", "浅色", "深色"], trackingMode: .selectOne, target: nil, action: nil)
+    private let statusIconLabel = NSTextField(labelWithString: "菜单栏图标")
+    private let statusIconControl = NSSegmentedControl(labels: ["固定日历", "今日日期"], trackingMode: .selectOne, target: nil, action: nil)
     private let backButton = NSButton(title: "返回", target: nil, action: nil)
     private let contentCard = NSView(frame: .zero)
 
@@ -45,6 +47,14 @@ final class SettingsViewController: NSViewController {
         themeControl.segmentStyle = .rounded
         contentCard.addSubview(themeControl)
 
+        statusIconLabel.font = .systemFont(ofSize: 14, weight: .semibold)
+        contentCard.addSubview(statusIconLabel)
+
+        statusIconControl.target = self
+        statusIconControl.action = #selector(statusIconChanged)
+        statusIconControl.segmentStyle = .rounded
+        contentCard.addSubview(statusIconControl)
+
         backButton.bezelStyle = .rounded
         backButton.target = self
         backButton.action = #selector(backTapped)
@@ -61,6 +71,8 @@ final class SettingsViewController: NSViewController {
         backButton.frame = NSRect(x: contentCard.bounds.width - 82, y: contentCard.bounds.height - 52, width: 60, height: 28)
         themeLabel.frame = NSRect(x: 24, y: contentCard.bounds.height - 108, width: 80, height: 20)
         themeControl.frame = NSRect(x: 24, y: contentCard.bounds.height - 140, width: 220, height: 28)
+        statusIconLabel.frame = NSRect(x: 24, y: contentCard.bounds.height - 186, width: 120, height: 20)
+        statusIconControl.frame = NSRect(x: 24, y: contentCard.bounds.height - 218, width: 220, height: 28)
         applyThemeStyle()
     }
 
@@ -72,6 +84,13 @@ final class SettingsViewController: NSViewController {
             themeControl.selectedSegment = 1
         case .dark:
             themeControl.selectedSegment = 2
+        }
+
+        switch store.statusIconMode {
+        case .fixedIcon:
+            statusIconControl.selectedSegment = 0
+        case .todayDate:
+            statusIconControl.selectedSegment = 1
         }
     }
 
@@ -88,6 +107,10 @@ final class SettingsViewController: NSViewController {
 
         store.themeMode = mode
         onThemeChanged?(mode)
+    }
+
+    @objc private func statusIconChanged() {
+        store.statusIconMode = statusIconControl.selectedSegment == 1 ? .todayDate : .fixedIcon
     }
 
     @objc private func backTapped() {
@@ -111,6 +134,7 @@ final class SettingsViewController: NSViewController {
         contentCard.layer?.borderColor = theme.border.cgColor
         titleLabel.textColor = theme.headerText
         themeLabel.textColor = theme.headerText
+        statusIconLabel.textColor = theme.headerText
         backButton.contentTintColor = theme.secondaryIcon
         backButton.bezelColor = theme.footerBackground
         backButton.attributedTitle = NSAttributedString(

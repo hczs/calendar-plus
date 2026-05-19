@@ -22,4 +22,8 @@ struct HolidayDateMatcher {
         let comps = calendar.dateComponents([.year, .month, .day], from: date)
         return comps.year == year && comps.month == month && comps.day == day
     }
+
+    func matchingRecord(for date: Date, in records: [HolidayRecord]) -> HolidayRecord? {
+        records.first { matches(date: date, holidayDateString: $0.date) }
+    }
 }

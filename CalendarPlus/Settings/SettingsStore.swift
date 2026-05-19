@@ -11,6 +11,10 @@ enum ThemeMode: String {
     case dark
 }
 
+extension Notification.Name {
+    static let settingsStoreDidChange = Notification.Name("SettingsStoreDidChange")
+}
+
 final class SettingsStore {
     private let userDefaults: UserDefaults
     private let statusIconModeKey = "statusIconMode"
@@ -26,6 +30,7 @@ final class SettingsStore {
         }
         set {
             userDefaults.set(newValue.rawValue, forKey: statusIconModeKey)
+            NotificationCenter.default.post(name: .settingsStoreDidChange, object: self)
         }
     }
 
@@ -35,6 +40,7 @@ final class SettingsStore {
         }
         set {
             userDefaults.set(newValue.rawValue, forKey: themeModeKey)
+            NotificationCenter.default.post(name: .settingsStoreDidChange, object: self)
         }
     }
 }

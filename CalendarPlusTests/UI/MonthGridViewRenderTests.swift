@@ -67,9 +67,11 @@ final class MonthGridViewRenderTests: XCTestCase {
     @MainActor
     func test_each_day_shows_lunar_text_under_gregorian_day() {
         let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 420))
+        let date = CalendarGregorian.shanghai.date(from: DateComponents(year: 2026, month: 3, day: 10))!
+        sut.setDisplayedMonthForTest(date)
         sut.layoutSubtreeIfNeeded()
 
-        XCTAssertFalse(sut.lunarTextForTest(day: 1).isEmpty)
+        XCTAssertFalse(sut.lunarTextForTest(day: 10).isEmpty)
     }
 
     @MainActor

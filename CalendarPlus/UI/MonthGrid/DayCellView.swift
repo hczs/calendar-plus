@@ -1,18 +1,5 @@
 import AppKit
 
-struct DayCellViewModel {
-    let day: Int
-    let isToday: Bool
-    let isSelected: Bool
-    let isHoliday: Bool
-
-    var badgeText: String? {
-        isHoliday ? "休" : nil
-    }
-}
-
-final class DayCellView: NSView {}
-
 @MainActor
 final class StyledDayCellView: NSView {
     private let numberLabel = NSTextField(labelWithString: "")
@@ -115,8 +102,8 @@ final class StyledDayCellView: NSView {
             cornerTagView.text = "休"
         case .makeupWorkday:
             cornerTagView.isHidden = false
-            cornerTagView.fillColor = NSColor(calibratedWhite: 0.45, alpha: 1)
-            cornerTagView.strokeColor = NSColor(calibratedWhite: 0.45, alpha: 1)
+            cornerTagView.fillColor = theme.workdayMarker
+            cornerTagView.strokeColor = theme.workdayMarker
             cornerTagView.textColor = .white
             cornerTagView.text = "班"
         case .none:

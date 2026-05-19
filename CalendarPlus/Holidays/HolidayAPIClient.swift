@@ -10,7 +10,13 @@ struct URLSessionHolidayAPIClient: HolidayAPIClient {
             throw URLError(.badURL)
         }
 
-        let (data, _) = try await URLSession.shared.data(from: url)
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let http = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        guard (200 ... 299).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
         guard let json = String(data: data, encoding: .utf8) else {
             throw URLError(.cannotDecodeContentData)
         }
