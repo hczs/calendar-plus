@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-19T00:00:00.000Z",
+  "title": "Design System: CalendarPlus",
+  "extensions": {
+    "colorMeta": {
+      "surface": {
+        "role": "neutral",
+        "displayName": "Warm Sand Surface",
+        "canonical": "oklch(96% 0.01 85)",
+        "tonalRamp": ["#1C1B19", "#3D3A36", "#6B6560", "#9C958C", "#C9C4BC", "#E5E0D8", "#F0ECE6", "#F6F4F0", "#FDFCFA"]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Cinnabar Accent",
+        "canonical": "oklch(58% 0.18 25)",
+        "tonalRamp": ["#4A1518", "#7A2228", "#A83238", "#D44B4F", "#E07074", "#E8A0A2", "#F0C8CA", "#F8E8E8"]
+      },
+      "workday": {
+        "role": "secondary",
+        "displayName": "Warm Blue Workday",
+        "canonical": "oklch(58% 0.12 250)",
+        "tonalRamp": ["#1A3058", "#2A4A7A", "#3A64A0", "#4A7FD4", "#6E9AE0", "#96B8EB", "#C0D6F5", "#E4ECF8"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Today Number", "purpose": "今日条公历数字，唯一 Display 级。" },
+      "body": { "displayName": "Day Number", "purpose": "月历格公历。" },
+      "caption": { "displayName": "Lunar / Festival", "purpose": "格内副行，节日优先。" }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.25, 0.1, 0.25, 1)", "purpose": "刷新图标旋转等状态反馈，150–200ms。" }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Today Hero",
+      "kind": "custom",
+      "refersTo": "status-pill",
+      "description": "弹窗顶部今日摘要条。",
+      "html": "<div class=\"ds-today-hero\"><div class=\"ds-today-main\"><span class=\"ds-today-num\">19</span><span class=\"ds-today-week\">星期二</span></div><p class=\"ds-today-sub\">农历四月初二</p><span class=\"ds-pill\">休息日</span></div>",
+      "css": ".ds-today-hero { background: #FDFCFA; padding: 12px 16px; border-bottom: 1px solid #E5E0D8; font-family: -apple-system, system-ui, sans-serif; } .ds-today-main { display: flex; align-items: baseline; gap: 8px; } .ds-today-num { font-size: 30px; font-weight: 600; color: #2C2824; line-height: 1.1; } .ds-today-week { font-size: 15px; color: #6B6560; } .ds-today-sub { margin: 4px 0 0; font-size: 12px; color: #6B6560; } .ds-pill { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 6px; background: #F3E4E4; color: #D44B4F; font-size: 11px; font-weight: 500; }"
+    },
+    {
+      "name": "Day Cell Today Ring",
+      "kind": "custom",
+      "refersTo": "day-cell-today",
+      "description": "月历中今天的描边环样式。",
+      "html": "<div class=\"ds-day-cell ds-day-today\"><span class=\"ds-day-num\">19</span><span class=\"ds-day-sub\">初八</span></div>",
+      "css": ".ds-day-cell { width: 40px; height: 44px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, system-ui, sans-serif; } .ds-day-today { border: 2px solid #D44B4F; background: transparent; } .ds-day-num { font-size: 15px; font-weight: 700; color: #2C2824; } .ds-day-sub { font-size: 10px; color: #6B6560; margin-top: 2px; }"
+    },
+    {
+      "name": "Day Cell Holiday Tint",
+      "kind": "custom",
+      "description": "法定节假日淡红底。",
+      "html": "<div class=\"ds-day-cell ds-day-holiday\"><span class=\"ds-day-num\">1</span><span class=\"ds-day-sub\">劳动节</span></div>",
+      "css": ".ds-day-cell { width: 40px; height: 44px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, system-ui, sans-serif; } .ds-day-holiday { background: #F3E4E4; } .ds-day-num { font-size: 15px; font-weight: 600; color: #2C2824; } .ds-day-sub { font-size: 10px; color: #D44B4F; margin-top: 2px; }"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "icon-button",
+      "description": "月历工具栏无边框图标按钮。",
+      "html": "<button class=\"ds-icon-btn\" aria-label=\"下个月\">›</button>",
+      "css": ".ds-icon-btn { width: 28px; height: 28px; border: none; background: transparent; color: #6B6560; font-size: 18px; cursor: pointer; border-radius: 6px; transition: color 0.15s cubic-bezier(0.25, 0.1, 0.25, 1); } .ds-icon-btn:hover { color: #2C2824; } .ds-icon-btn:focus-visible { outline: 2px solid #D44B4F; outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "办公桌边的黄历",
+    "overview": "CalendarPlus 是菜单栏里一块安静、信息足的日期玻璃。暖米白底、朱砂红点缀、今日条优先。弹窗是单层表面，不靠卡片套娃。",
+    "keyCharacteristics": [
+      "顶部今日条承担主叙事",
+      "暖中性浅色为默认精致态",
+      "休班用整格淡色底",
+      "今天用描边环而非整块红底",
+      "macOS 原生字体与控件"
+    ],
+    "rules": [
+      { "name": "The Warm Neutral Rule", "body": "中性色向暖沙偏，禁止冷蓝灰 SaaS 背景。", "section": "colors" },
+      { "name": "The Semantic Red Rule", "body": "红色只表达今天语义、周末、节日、休班。", "section": "colors" },
+      { "name": "The One Line Detail Rule", "body": "每格最多一行副文案，节日优先于农历。", "section": "typography" },
+      { "name": "The Flat Popover Rule", "body": "禁止 card-in-card；深度靠色差与分隔线。", "section": "elevation" }
+    ],
+    "dos": [
+      "Do 用暖沙 surface 作弹窗根",
+      "Do 让今日条 1 秒内回答今天是否放假",
+      "Do 休班用淡色整格底",
+      "Do 使用 SF Pro 与 macOS 原生控件"
+    ],
+    "donts": [
+      "Don't 做网页风卡片套壳",
+      "Don't 照搬 Windows 11 任务栏日历",
+      "Don't 使用霓虹深色、玻璃模糊、渐变字",
+      "Don't 用三角角标作为休班主标识",
+      "Don't 在格内用整块红底表示今天"
+    ]
+  }
+}
