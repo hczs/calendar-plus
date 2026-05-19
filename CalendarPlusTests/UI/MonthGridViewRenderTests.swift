@@ -1,6 +1,19 @@
 import XCTest
 @testable import CalendarPlus
 
+@MainActor
+private final class MonthGridHolidayService: HolidayRefreshing {
+    var cached: [Int: [HolidayRecord]] = [:]
+
+    func refresh(year: Int) async throws -> [HolidayRecord] {
+        cached[year] ?? []
+    }
+
+    func loadCached(year: Int) -> [HolidayRecord] {
+        cached[year] ?? []
+    }
+}
+
 final class MonthGridViewRenderTests: XCTestCase {
     private let calendar = CalendarGregorian.shanghai
 
@@ -127,6 +140,31 @@ final class MonthGridViewRenderTests: XCTestCase {
 
         XCTAssertFalse(sut.dayLabelTextForTest(day: tuesdayDay).contains("[W]"))
         XCTAssertTrue(sut.cornerTagTextForTest(day: tuesdayDay).isEmpty)
+    }
+
+    @MainActor
+    func test_forward_month_navigation_shows_holiday_badge_with_bound_view_model() {
+        let service = MonthGridHolidayService()
+        service.cached[2026] = [
+            HolidayRecord(date: "2026-05-01", isHoliday: true, name: "劳动节"),
+            HolidayRecord(date: "2026-06-19", isHoliday: true, name: "端午节")
+        ]
+        let may = calendar.date(from: DateComponents(year: 2026, month: 5, day: 10))!
+        let vm = CalendarViewModel(service: service, initialDate: may)
+        let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 420))
+        sut.onDisplayedMonthChanged = { vm.updateDisplayedMonth($0) }
+        var notifyCount = 0
+        vm.onStateChanged = { [weak sut] in
+            notifyCount += 1
+            sut?.bind(viewModel: vm)
+        }
+        sut.bind(viewModel: vm)
+        XCTAssertEqual(sut.cornerTagTextForTest(day: 1), "休")
+
+        let june = calendar.date(from: DateComponents(year: 2026, month: 6, day: 1))!
+        sut.setDisplayedMonthForTest(june)
+        XCTAssertGreaterThanOrEqual(notifyCount, 1)
+        XCTAssertEqual(sut.cornerTagTextForTest(day: 19), "休")
     }
 
     @MainActor

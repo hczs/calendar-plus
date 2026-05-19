@@ -28,6 +28,21 @@ final class CalendarViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_update_displayed_month_notifies_on_same_year_month_change() {
+        let service = YearKeyedHolidayService()
+        service.cached[2026] = [HolidayRecord(date: "2026-06-01", isHoliday: true, name: "儿童节")]
+        let vm = CalendarViewModel(service: service, initialDate: date(year: 2026, month: 5, day: 10))
+        var notifyCount = 0
+        vm.onStateChanged = { notifyCount += 1 }
+
+        vm.updateDisplayedMonth(date(year: 2026, month: 6, day: 1))
+
+        XCTAssertEqual(notifyCount, 1)
+        XCTAssertEqual(vm.displayedYear, 2026)
+        XCTAssertEqual(vm.holidayRecords.first?.date, "2026-06-01")
+    }
+
+    @MainActor
     func test_update_displayed_month_fetches_when_cache_empty_for_year() async {
         let service = YearKeyedHolidayService()
         let vm = CalendarViewModel(service: service, initialDate: date(year: 2026, month: 1, day: 10))

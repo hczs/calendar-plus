@@ -128,17 +128,20 @@ final class MonthGridView: NSView {
     }
 
     @objc private func showPreviousMonth() {
-        guard let next = calendar.date(byAdding: .month, value: -1, to: displayedMonthDate) else { return }
-        displayedMonthDate = next
-        onDisplayedMonthChanged?(displayedMonthDate)
-        render()
+        changeDisplayedMonth(byAdding: -1)
     }
 
     @objc private func showNextMonth() {
-        guard let next = calendar.date(byAdding: .month, value: 1, to: displayedMonthDate) else { return }
+        changeDisplayedMonth(byAdding: 1)
+    }
+
+    private func changeDisplayedMonth(byAdding months: Int) {
+        guard let next = calendar.date(byAdding: .month, value: months, to: displayedMonthDate) else { return }
         displayedMonthDate = next
         onDisplayedMonthChanged?(displayedMonthDate)
-        render()
+        if viewModel == nil {
+            render()
+        }
     }
 
     @objc private func refreshTapped() {
@@ -241,6 +244,7 @@ final class MonthGridView: NSView {
 
         applyAppearance()
         needsLayout = true
+        layoutSubtreeIfNeeded()
     }
 
     private func applyAppearance() {
@@ -372,7 +376,9 @@ final class MonthGridView: NSView {
     func setDisplayedMonthForTest(_ date: Date) {
         displayedMonthDate = date
         onDisplayedMonthChanged?(date)
-        render()
+        if viewModel == nil {
+            render()
+        }
     }
 
     func applyHolidayRecordsForTest(_ records: [HolidayRecord]) {

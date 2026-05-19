@@ -34,13 +34,12 @@ final class CalendarViewModel {
 
     func updateDisplayedMonth(_ date: Date) {
         let year = CalendarGregorian.shanghai.component(.year, from: date)
-        guard year != displayedYear else { return }
-        displayedYear = year
-        holidayRecords = service.loadCached(year: year)
-        onStateChanged?()
-        if holidayRecords.isEmpty {
+        if year != displayedYear {
+            displayedYear = year
+            holidayRecords = service.loadCached(year: year)
             Task { await refreshDisplayedYear(showSuccessMessage: false) }
         }
+        onStateChanged?()
     }
 
     func refreshTapped() async {
@@ -49,16 +48,20 @@ final class CalendarViewModel {
 
     private func refreshDisplayedYear(showSuccessMessage: Bool) async {
         guard isRefreshEnabled else { return }
+        let yearToFetch = displayedYear
         isRefreshEnabled = false
         defer { isRefreshEnabled = true }
 
         do {
-            holidayRecords = try await service.refresh(year: displayedYear)
+            let records = try await service.refresh(year: yearToFetch)
+            guard displayedYear == yearToFetch else { return }
+            holidayRecords = records
             if showSuccessMessage {
                 message = "已更新"
                 scheduleSuccessMessageClear()
             }
         } catch {
+            guard displayedYear == yearToFetch else { return }
             messageClearTask?.cancel()
             message = "更新失败"
         }

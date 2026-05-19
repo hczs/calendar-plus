@@ -157,6 +157,10 @@ final class StyledDayCellView: NSView {
         }
 
         updateAccessibility(date: date, isToday: isToday, markerType: markerType)
+        if !markerBadgeLabel.isHidden {
+            needsLayout = true
+            layoutSubtreeIfNeeded()
+        }
     }
 
     private func updateAccessibility(date: Date, isToday: Bool, markerType: DayMarkerType) {
