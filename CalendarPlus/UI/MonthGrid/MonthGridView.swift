@@ -3,7 +3,6 @@ import AppKit
 @MainActor
 final class MonthGridView: NSView {
     private enum Layout {
-        static let todayHeroHeight: CGFloat = 60
         static let toolbarHeight: CGFloat = 44
         static let statusHeight: CGFloat = 18
         static let horizontalPadding: CGFloat = 12
@@ -25,7 +24,6 @@ final class MonthGridView: NSView {
         return formatter
     }()
 
-    private let todayHeroView = TodayHeroView(frame: .zero)
     private let toolbarView = NSView(frame: .zero)
 
     private let monthTitleLabel = NSTextField(labelWithString: "")
@@ -49,8 +47,6 @@ final class MonthGridView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-
-        addSubview(todayHeroView)
 
         toolbarView.wantsLayer = true
         addSubview(toolbarView)
@@ -93,16 +89,9 @@ final class MonthGridView: NSView {
         let statusVisible = !statusMessageLabel.isHidden
         let statusBlockHeight = statusVisible ? Layout.statusHeight : 0
 
-        todayHeroView.frame = NSRect(
-            x: 0,
-            y: bounds.height - Layout.todayHeroHeight,
-            width: bounds.width,
-            height: Layout.todayHeroHeight
-        )
-
         toolbarView.frame = NSRect(
             x: 0,
-            y: todayHeroView.frame.minY - Layout.toolbarHeight,
+            y: bounds.height - Layout.toolbarHeight,
             width: bounds.width,
             height: Layout.toolbarHeight
         )
@@ -256,12 +245,9 @@ final class MonthGridView: NSView {
 
     private func applyAppearance() {
         let theme = CalendarTheme.current(for: effectiveAppearance)
-        let records = holidayRecordsForDisplay
 
         layer?.backgroundColor = theme.background.cgColor
         toolbarView.layer?.backgroundColor = theme.background.cgColor
-
-        todayHeroView.configure(theme: theme, holidayRecords: records)
 
         monthTitleLabel.textColor = theme.headerText
         statusMessageLabel.textColor = theme.weekText
@@ -294,6 +280,7 @@ final class MonthGridView: NSView {
             if slot < 1 || slot > dayCount {
                 dayCells[index].configure(
                     day: nil,
+                    date: nil,
                     isToday: false,
                     isWeekend: false,
                     markerType: .none,
@@ -329,6 +316,7 @@ final class MonthGridView: NSView {
 
             dayCells[index].configure(
                 day: slot,
+                date: currentDate,
                 isToday: isToday,
                 isWeekend: isWeekend,
                 markerType: markerType,
@@ -369,12 +357,12 @@ final class MonthGridView: NSView {
         dayCellByDay[day]?.debugNumberColor
     }
 
-    func holidayTintAppliedForTest(day: Int) -> Bool {
-        dayCellByDay[day]?.debugUsesHolidayTintForTest ?? false
+    func dayDetailColorForTest(day: Int) -> NSColor? {
+        dayCellByDay[day]?.debugDetailColor
     }
 
-    var todayHeroPillTextForTest: String {
-        todayHeroView.pillTextForTest
+    func holidayTintAppliedForTest(day: Int) -> Bool {
+        dayCellByDay[day]?.debugUsesHolidayTintForTest ?? false
     }
 
     var statusMessageForTest: String {

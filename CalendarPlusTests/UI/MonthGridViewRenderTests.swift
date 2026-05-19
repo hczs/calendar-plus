@@ -86,8 +86,9 @@ final class MonthGridViewRenderTests: XCTestCase {
     }
 
     @MainActor
-    func test_makeup_workday_shows_blue_dot_marker() {
+    func test_makeup_workday_shows_ban_badge_and_weekday_number_color() {
         let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 380))
+        sut.appearance = NSAppearance(named: .aqua)
         let comps = Calendar.current.dateComponents([.year, .month], from: Date())
         let saturdayDay = currentMonthDay(matching: 7)
         let dateString = String(format: "%04d-%02d-%02d", comps.year ?? 2026, comps.month ?? 1, saturdayDay)
@@ -96,6 +97,33 @@ final class MonthGridViewRenderTests: XCTestCase {
 
         XCTAssertTrue(sut.dayLabelTextForTest(day: saturdayDay).contains("[W]"))
         XCTAssertEqual(sut.cornerTagTextForTest(day: saturdayDay), "班")
+
+        let theme = CalendarTheme.current(for: NSAppearance(named: .aqua))
+        assertColorClose(sut.dayNumberColorForTest(day: saturdayDay), theme.dayText)
+    }
+
+    @MainActor
+    func test_holiday_day_shows_xiu_badge() {
+        let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 420))
+        let comps = Calendar.current.dateComponents([.year, .month], from: Date())
+        let dateString = String(format: "%04d-%02d-01", comps.year ?? 2026, comps.month ?? 1)
+        sut.applyHolidayRecordsForTest([HolidayRecord(date: dateString, isHoliday: true, name: "测试假期")])
+        sut.layoutSubtreeIfNeeded()
+
+        XCTAssertEqual(sut.cornerTagTextForTest(day: 1), "休")
+    }
+
+    @MainActor
+    func test_weekend_lunar_uses_accent_color() {
+        let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 380))
+        sut.appearance = NSAppearance(named: .aqua)
+        sut.layoutSubtreeIfNeeded()
+
+        let saturdayDay = currentMonthDay(matching: 7)
+        let theme = CalendarTheme.current(for: NSAppearance(named: .aqua))
+        XCTAssertFalse(sut.lunarTextForTest(day: saturdayDay).isEmpty)
+        assertColorClose(sut.dayNumberColorForTest(day: saturdayDay), theme.primary)
+        assertColorClose(sut.dayDetailColorForTest(day: saturdayDay), theme.primary)
     }
 
     @MainActor
