@@ -25,6 +25,26 @@ final class RefreshFlowTests: XCTestCase {
 
         XCTAssertEqual(sut.statusMessageForTest, "已更新")
     }
+
+    @MainActor
+    func test_month_grid_hides_refresh_message_after_auto_dismiss() async {
+        let service = ImmediateHolidayService()
+        let vm = CalendarViewModel(service: service, messageDisplayDuration: 0.05)
+        let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 380))
+        vm.onStateChanged = { [weak sut, weak vm] in
+            guard let sut, let vm else { return }
+            sut.bind(viewModel: vm)
+        }
+        sut.bind(viewModel: vm)
+
+        await vm.refreshTapped()
+        XCTAssertEqual(sut.statusMessageForTest, "已更新")
+
+        try? await Task.sleep(nanoseconds: 80_000_000)
+        sut.bind(viewModel: vm)
+
+        XCTAssertEqual(sut.statusMessageForTest, "")
+    }
 }
 
 @MainActor

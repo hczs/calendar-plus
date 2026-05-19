@@ -55,7 +55,9 @@ final class SettingsViewController: NSViewController {
         statusIconControl.segmentStyle = .rounded
         contentCard.addSubview(statusIconControl)
 
-        backButton.bezelStyle = .rounded
+        backButton.bezelStyle = .accessoryBar
+        backButton.isBordered = false
+        backButton.font = .systemFont(ofSize: 15, weight: .semibold)
         backButton.target = self
         backButton.action = #selector(backTapped)
         contentCard.addSubview(backButton)
@@ -135,14 +137,7 @@ final class SettingsViewController: NSViewController {
         titleLabel.textColor = theme.headerText
         themeLabel.textColor = theme.headerText
         statusIconLabel.textColor = theme.headerText
-        backButton.contentTintColor = theme.secondaryIcon
-        backButton.bezelColor = theme.footerBackground
-        backButton.attributedTitle = NSAttributedString(
-            string: "返回",
-            attributes: [
-                .foregroundColor: theme.dayText,
-                .font: NSFont.systemFont(ofSize: 15, weight: .semibold)
-            ]
-        )
+        backButton.title = "返回"
+        backButton.contentTintColor = theme.dayText
     }
 }

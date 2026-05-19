@@ -38,6 +38,18 @@ final class CalendarViewModelTests: XCTestCase {
         XCTAssertEqual(vm.message, "更新失败")
     }
 
+    @MainActor
+    func test_refresh_message_clears_after_display_duration() async {
+        let service = YearKeyedHolidayService()
+        let vm = CalendarViewModel(service: service, messageDisplayDuration: 0.05)
+
+        await vm.refreshTapped()
+        XCTAssertEqual(vm.message, "已更新")
+
+        try? await Task.sleep(nanoseconds: 80_000_000)
+        XCTAssertNil(vm.message)
+    }
+
     private func date(year: Int, month: Int, day: Int) -> Date {
         CalendarGregorian.shanghai.date(from: DateComponents(year: year, month: month, day: day))!
     }
