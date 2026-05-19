@@ -2,14 +2,24 @@ import AppKit
 
 @MainActor
 final class SettingsViewController: NSViewController {
+    private enum Layout {
+        static let toolbarHeight: CGFloat = 44
+        static let horizontalPadding: CGFloat = 12
+        static let sectionTop: CGFloat = 16
+        static let rowGap: CGFloat = 8
+        static let labelHeight: CGFloat = 20
+        static let controlHeight: CGFloat = 28
+    }
+
     private let store: SettingsStore
+    private let toolbarView = NSView(frame: .zero)
     private let titleLabel = NSTextField(labelWithString: "设置")
     private let themeLabel = NSTextField(labelWithString: "主题")
     private let themeControl = NSSegmentedControl(labels: ["系统", "浅色", "深色"], trackingMode: .selectOne, target: nil, action: nil)
     private let statusIconLabel = NSTextField(labelWithString: "菜单栏图标")
     private let statusIconControl = NSSegmentedControl(labels: ["固定日历", "今日日期"], trackingMode: .selectOne, target: nil, action: nil)
     private let backButton = NSButton(title: "返回", target: nil, action: nil)
-    private let contentCard = NSView(frame: .zero)
+    private let dividerView = NSBox()
 
     var onBackTapped: (() -> Void)?
     var onThemeChanged: ((ThemeMode) -> Void)?
@@ -31,36 +41,38 @@ final class SettingsViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.wantsLayer = true
-        contentCard.wantsLayer = true
-        contentCard.layer?.cornerRadius = 14
-        contentCard.layer?.borderWidth = 1
-        view.addSubview(contentCard)
 
-        titleLabel.font = .systemFont(ofSize: 20, weight: .bold)
-        contentCard.addSubview(titleLabel)
+        toolbarView.wantsLayer = true
+        view.addSubview(toolbarView)
 
-        themeLabel.font = .systemFont(ofSize: 14, weight: .semibold)
-        contentCard.addSubview(themeLabel)
-
-        themeControl.target = self
-        themeControl.action = #selector(themeChanged)
-        themeControl.segmentStyle = .rounded
-        contentCard.addSubview(themeControl)
-
-        statusIconLabel.font = .systemFont(ofSize: 14, weight: .semibold)
-        contentCard.addSubview(statusIconLabel)
-
-        statusIconControl.target = self
-        statusIconControl.action = #selector(statusIconChanged)
-        statusIconControl.segmentStyle = .rounded
-        contentCard.addSubview(statusIconControl)
+        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        toolbarView.addSubview(titleLabel)
 
         backButton.bezelStyle = .accessoryBar
         backButton.isBordered = false
         backButton.font = .systemFont(ofSize: 15, weight: .semibold)
         backButton.target = self
         backButton.action = #selector(backTapped)
-        contentCard.addSubview(backButton)
+        toolbarView.addSubview(backButton)
+
+        dividerView.boxType = .separator
+        view.addSubview(dividerView)
+
+        themeLabel.font = .systemFont(ofSize: 14, weight: .semibold)
+        view.addSubview(themeLabel)
+
+        themeControl.target = self
+        themeControl.action = #selector(themeChanged)
+        themeControl.segmentStyle = .rounded
+        view.addSubview(themeControl)
+
+        statusIconLabel.font = .systemFont(ofSize: 14, weight: .semibold)
+        view.addSubview(statusIconLabel)
+
+        statusIconControl.target = self
+        statusIconControl.action = #selector(statusIconChanged)
+        statusIconControl.segmentStyle = .rounded
+        view.addSubview(statusIconControl)
 
         applyFromStore()
         applyThemeStyle()
@@ -68,13 +80,35 @@ final class SettingsViewController: NSViewController {
 
     override func viewDidLayout() {
         super.viewDidLayout()
-        contentCard.frame = NSRect(x: 8, y: 8, width: view.bounds.width - 16, height: view.bounds.height - 16)
-        titleLabel.frame = NSRect(x: 24, y: contentCard.bounds.height - 54, width: 120, height: 28)
-        backButton.frame = NSRect(x: contentCard.bounds.width - 82, y: contentCard.bounds.height - 52, width: 60, height: 28)
-        themeLabel.frame = NSRect(x: 24, y: contentCard.bounds.height - 108, width: 80, height: 20)
-        themeControl.frame = NSRect(x: 24, y: contentCard.bounds.height - 140, width: 220, height: 28)
-        statusIconLabel.frame = NSRect(x: 24, y: contentCard.bounds.height - 186, width: 120, height: 20)
-        statusIconControl.frame = NSRect(x: 24, y: contentCard.bounds.height - 218, width: 220, height: 28)
+
+        toolbarView.frame = NSRect(
+            x: 0,
+            y: view.bounds.height - Layout.toolbarHeight,
+            width: view.bounds.width,
+            height: Layout.toolbarHeight
+        )
+        titleLabel.frame = NSRect(x: Layout.horizontalPadding, y: 10, width: 120, height: 24)
+        backButton.frame = NSRect(
+            x: toolbarView.bounds.width - Layout.horizontalPadding - 60,
+            y: 8,
+            width: 60,
+            height: 28
+        )
+
+        let dividerY = toolbarView.frame.minY - 1
+        dividerView.frame = NSRect(x: 0, y: dividerY, width: view.bounds.width, height: 1)
+
+        let contentWidth = view.bounds.width - Layout.horizontalPadding * 2
+        var y = dividerY - Layout.sectionTop - Layout.labelHeight
+        themeLabel.frame = NSRect(x: Layout.horizontalPadding, y: y, width: contentWidth, height: Layout.labelHeight)
+        y -= Layout.rowGap + Layout.controlHeight
+        themeControl.frame = NSRect(x: Layout.horizontalPadding, y: y, width: min(contentWidth, 220), height: Layout.controlHeight)
+
+        y -= Layout.sectionTop + Layout.labelHeight
+        statusIconLabel.frame = NSRect(x: Layout.horizontalPadding, y: y, width: contentWidth, height: Layout.labelHeight)
+        y -= Layout.rowGap + Layout.controlHeight
+        statusIconControl.frame = NSRect(x: Layout.horizontalPadding, y: y, width: min(contentWidth, 220), height: Layout.controlHeight)
+
         applyThemeStyle()
     }
 
@@ -132,12 +166,10 @@ final class SettingsViewController: NSViewController {
     private func applyThemeStyle() {
         let theme = CalendarTheme.current(for: view.effectiveAppearance)
         view.layer?.backgroundColor = theme.background.cgColor
-        contentCard.layer?.backgroundColor = theme.cardBackground.cgColor
-        contentCard.layer?.borderColor = theme.border.cgColor
+        toolbarView.layer?.backgroundColor = theme.background.cgColor
         titleLabel.textColor = theme.headerText
         themeLabel.textColor = theme.headerText
         statusIconLabel.textColor = theme.headerText
-        backButton.title = "返回"
-        backButton.contentTintColor = theme.dayText
+        backButton.contentTintColor = theme.secondaryIcon
     }
 }

@@ -18,7 +18,6 @@ struct CalendarTheme {
     let holidayTint: NSColor
     let workdayTint: NSColor
     let secondaryIcon: NSColor
-    let todayDetailText: NSColor
 
     var cardBackground: NSColor { elevated }
     var border: NSColor { divider }
@@ -39,8 +38,7 @@ struct CalendarTheme {
                 workdayMarker: NSColor(calibratedRed: 0.45, green: 0.62, blue: 0.88, alpha: 1),
                 holidayTint: NSColor(calibratedRed: 0.22, green: 0.14, blue: 0.14, alpha: 1),
                 workdayTint: NSColor(calibratedRed: 0.12, green: 0.16, blue: 0.22, alpha: 1),
-                secondaryIcon: NSColor(calibratedRed: 0.55, green: 0.52, blue: 0.49, alpha: 1),
-                todayDetailText: NSColor(calibratedRed: 0.96, green: 0.94, blue: 0.92, alpha: 1)
+                secondaryIcon: NSColor(calibratedRed: 0.55, green: 0.52, blue: 0.49, alpha: 1)
             )
         }
         return CalendarTheme(
@@ -54,8 +52,7 @@ struct CalendarTheme {
             workdayMarker: NSColor(calibratedRed: 0.290, green: 0.498, blue: 0.831, alpha: 1),
             holidayTint: NSColor(calibratedRed: 0.953, green: 0.894, blue: 0.894, alpha: 1),
             workdayTint: NSColor(calibratedRed: 0.894, green: 0.925, blue: 0.973, alpha: 1),
-            secondaryIcon: NSColor(calibratedRed: 0.420, green: 0.396, blue: 0.376, alpha: 1),
-            todayDetailText: NSColor(calibratedRed: 0.980, green: 0.973, blue: 0.965, alpha: 1)
+            secondaryIcon: NSColor(calibratedRed: 0.420, green: 0.396, blue: 0.376, alpha: 1)
         )
     }
 }

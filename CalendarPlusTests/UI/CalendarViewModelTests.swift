@@ -28,6 +28,24 @@ final class CalendarViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_update_displayed_month_fetches_when_cache_empty_for_year() async {
+        let service = YearKeyedHolidayService()
+        let vm = CalendarViewModel(service: service, initialDate: date(year: 2026, month: 1, day: 10))
+
+        vm.updateDisplayedMonth(date(year: 2025, month: 12, day: 1))
+        XCTAssertEqual(vm.displayedYear, 2025)
+
+        for _ in 0..<50 {
+            if !vm.holidayRecords.isEmpty { break }
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+
+        XCTAssertEqual(vm.holidayRecords.first?.date, "2025-01-01")
+        XCTAssertEqual(service.refreshedYears, [2025])
+        XCTAssertNil(vm.message)
+    }
+
+    @MainActor
     func test_refresh_failure_sets_message() async {
         let service = YearKeyedHolidayService()
         service.shouldFailRefresh = true
