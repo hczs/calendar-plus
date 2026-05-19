@@ -21,7 +21,7 @@ final class CalendarRootViewController: NSViewController {
     }
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 500))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 432, height: 420))
     }
 
     override func viewDidLoad() {

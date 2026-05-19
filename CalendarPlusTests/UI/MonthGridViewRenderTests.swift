@@ -1,17 +1,30 @@
 import XCTest
 @testable import CalendarPlus
 
+@MainActor
+private final class MonthGridHolidayService: HolidayRefreshing {
+    var cached: [Int: [HolidayRecord]] = [:]
+
+    func refresh(year: Int) async throws -> [HolidayRecord] {
+        cached[year] ?? []
+    }
+
+    func loadCached(year: Int) -> [HolidayRecord] {
+        cached[year] ?? []
+    }
+}
+
 final class MonthGridViewRenderTests: XCTestCase {
+    private let calendar = CalendarGregorian.shanghai
+
     private func currentMonthDay(matching weekday: Int) -> Int {
-        var cal = Calendar(identifier: .gregorian)
-        cal.firstWeekday = 2
         let now = Date()
-        let comps = cal.dateComponents([.year, .month], from: now)
-        let monthStart = cal.date(from: comps)!
-        let dayCount = cal.range(of: .day, in: .month, for: monthStart)!.count
+        let comps = calendar.dateComponents([.year, .month], from: now)
+        let monthStart = calendar.date(from: comps)!
+        let dayCount = calendar.range(of: .day, in: .month, for: monthStart)!.count
         for day in 1...dayCount {
-            let d = cal.date(from: DateComponents(year: comps.year, month: comps.month, day: day))!
-            if cal.component(.weekday, from: d) == weekday { return day }
+            let d = calendar.date(from: DateComponents(year: comps.year, month: comps.month, day: day))!
+            if calendar.component(.weekday, from: d) == weekday { return day }
         }
         return 1
     }
@@ -36,7 +49,7 @@ final class MonthGridViewRenderTests: XCTestCase {
         let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 380))
         sut.layoutSubtreeIfNeeded()
 
-        let daysInMonth = Calendar.current.range(of: .day, in: .month, for: Date())!.count
+        let daysInMonth = calendar.range(of: .day, in: .month, for: Date())!.count
         XCTAssertEqual(sut.renderedDayCountForTest, daysInMonth)
     }
 
@@ -53,21 +66,22 @@ final class MonthGridViewRenderTests: XCTestCase {
     }
 
     @MainActor
-    func test_holiday_day_uses_tint_instead_of_corner_tag() {
+    func test_holiday_day_shows_tint_and_xiu_badge() {
         let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 420))
-        let comps = Calendar.current.dateComponents([.year, .month], from: Date())
+        let comps = calendar.dateComponents([.year, .month], from: Date())
         let dateString = String(format: "%04d-%02d-01", comps.year ?? 2026, comps.month ?? 1)
         sut.applyHolidayRecordsForTest([HolidayRecord(date: dateString, isHoliday: true, name: "测试假期")])
         sut.layoutSubtreeIfNeeded()
 
         XCTAssertTrue(sut.dayLabelTextForTest(day: 1).contains("[H]"))
         XCTAssertTrue(sut.holidayTintAppliedForTest(day: 1))
+        XCTAssertEqual(sut.cornerTagTextForTest(day: 1), "休")
     }
 
     @MainActor
     func test_each_day_shows_lunar_text_under_gregorian_day() {
         let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 420))
-        let date = CalendarGregorian.shanghai.date(from: DateComponents(year: 2026, month: 3, day: 10))!
+        let date = calendar.date(from: DateComponents(year: 2026, month: 3, day: 10))!
         sut.setDisplayedMonthForTest(date)
         sut.layoutSubtreeIfNeeded()
 
@@ -77,7 +91,7 @@ final class MonthGridViewRenderTests: XCTestCase {
     @MainActor
     func test_festival_day_hides_lunar_text() {
         let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 360, height: 560))
-        let date = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2026, month: 5, day: 1))!
+        let date = calendar.date(from: DateComponents(year: 2026, month: 5, day: 1))!
         sut.setDisplayedMonthForTest(date)
         sut.layoutSubtreeIfNeeded()
 
@@ -86,9 +100,10 @@ final class MonthGridViewRenderTests: XCTestCase {
     }
 
     @MainActor
-    func test_makeup_workday_shows_blue_dot_marker() {
+    func test_makeup_workday_shows_ban_badge_and_weekday_number_color() {
         let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 380))
-        let comps = Calendar.current.dateComponents([.year, .month], from: Date())
+        sut.appearance = NSAppearance(named: .aqua)
+        let comps = calendar.dateComponents([.year, .month], from: Date())
         let saturdayDay = currentMonthDay(matching: 7)
         let dateString = String(format: "%04d-%02d-%02d", comps.year ?? 2026, comps.month ?? 1, saturdayDay)
         sut.applyHolidayRecordsForTest([HolidayRecord(date: dateString, isHoliday: false, name: "补班")])
@@ -96,12 +111,28 @@ final class MonthGridViewRenderTests: XCTestCase {
 
         XCTAssertTrue(sut.dayLabelTextForTest(day: saturdayDay).contains("[W]"))
         XCTAssertEqual(sut.cornerTagTextForTest(day: saturdayDay), "班")
+
+        let theme = CalendarTheme.current(for: NSAppearance(named: .aqua))
+        assertColorClose(sut.dayNumberColorForTest(day: saturdayDay), theme.dayText)
+    }
+
+    @MainActor
+    func test_weekend_lunar_uses_accent_color() {
+        let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 380))
+        sut.appearance = NSAppearance(named: .aqua)
+        sut.layoutSubtreeIfNeeded()
+
+        let saturdayDay = currentMonthDay(matching: 7)
+        let theme = CalendarTheme.current(for: NSAppearance(named: .aqua))
+        XCTAssertFalse(sut.lunarTextForTest(day: saturdayDay).isEmpty)
+        assertColorClose(sut.dayNumberColorForTest(day: saturdayDay), theme.primary)
+        assertColorClose(sut.dayDetailColorForTest(day: saturdayDay), theme.primary)
     }
 
     @MainActor
     func test_makeup_workday_on_weekday_hides_blue_dot() {
         let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 380))
-        let comps = Calendar.current.dateComponents([.year, .month], from: Date())
+        let comps = calendar.dateComponents([.year, .month], from: Date())
         let tuesdayDay = currentMonthDay(matching: 3)
         let dateString = String(format: "%04d-%02d-%02d", comps.year ?? 2026, comps.month ?? 1, tuesdayDay)
         sut.applyHolidayRecordsForTest([HolidayRecord(date: dateString, isHoliday: false, name: "补班")])
@@ -109,6 +140,31 @@ final class MonthGridViewRenderTests: XCTestCase {
 
         XCTAssertFalse(sut.dayLabelTextForTest(day: tuesdayDay).contains("[W]"))
         XCTAssertTrue(sut.cornerTagTextForTest(day: tuesdayDay).isEmpty)
+    }
+
+    @MainActor
+    func test_forward_month_navigation_shows_holiday_badge_with_bound_view_model() {
+        let service = MonthGridHolidayService()
+        service.cached[2026] = [
+            HolidayRecord(date: "2026-05-01", isHoliday: true, name: "劳动节"),
+            HolidayRecord(date: "2026-06-19", isHoliday: true, name: "端午节")
+        ]
+        let may = calendar.date(from: DateComponents(year: 2026, month: 5, day: 10))!
+        let vm = CalendarViewModel(service: service, initialDate: may)
+        let sut = MonthGridView(frame: NSRect(x: 0, y: 0, width: 320, height: 420))
+        sut.onDisplayedMonthChanged = { vm.updateDisplayedMonth($0) }
+        var notifyCount = 0
+        vm.onStateChanged = { [weak sut] in
+            notifyCount += 1
+            sut?.bind(viewModel: vm)
+        }
+        sut.bind(viewModel: vm)
+        XCTAssertEqual(sut.cornerTagTextForTest(day: 1), "休")
+
+        let june = calendar.date(from: DateComponents(year: 2026, month: 6, day: 1))!
+        sut.setDisplayedMonthForTest(june)
+        XCTAssertGreaterThanOrEqual(notifyCount, 1)
+        XCTAssertEqual(sut.cornerTagTextForTest(day: 19), "休")
     }
 
     @MainActor

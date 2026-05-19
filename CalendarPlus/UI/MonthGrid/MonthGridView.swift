@@ -3,14 +3,15 @@ import AppKit
 @MainActor
 final class MonthGridView: NSView {
     private enum Layout {
-        static let todayHeroHeight: CGFloat = 60
         static let toolbarHeight: CGFloat = 44
         static let statusHeight: CGFloat = 18
         static let horizontalPadding: CGFloat = 12
         static let weekdayRowHeight: CGFloat = 18
         static let weekdayGapBelowToolbar: CGFloat = 6
         static let gridBottomInset: CGFloat = 10
-        static let minCellSize: CGFloat = 36
+        static let minCellSize: CGFloat = 48
+        /// 相邻格子之间的缝隙，避免休班底色/今天描边连成一片
+        static let cellGap: CGFloat = 4
         static let minGridHeight: CGFloat = 180
     }
 
@@ -25,7 +26,6 @@ final class MonthGridView: NSView {
         return formatter
     }()
 
-    private let todayHeroView = TodayHeroView(frame: .zero)
     private let toolbarView = NSView(frame: .zero)
 
     private let monthTitleLabel = NSTextField(labelWithString: "")
@@ -49,8 +49,6 @@ final class MonthGridView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-
-        addSubview(todayHeroView)
 
         toolbarView.wantsLayer = true
         addSubview(toolbarView)
@@ -93,16 +91,9 @@ final class MonthGridView: NSView {
         let statusVisible = !statusMessageLabel.isHidden
         let statusBlockHeight = statusVisible ? Layout.statusHeight : 0
 
-        todayHeroView.frame = NSRect(
-            x: 0,
-            y: bounds.height - Layout.todayHeroHeight,
-            width: bounds.width,
-            height: Layout.todayHeroHeight
-        )
-
         toolbarView.frame = NSRect(
             x: 0,
-            y: todayHeroView.frame.minY - Layout.toolbarHeight,
+            y: bounds.height - Layout.toolbarHeight,
             width: bounds.width,
             height: Layout.toolbarHeight
         )
@@ -139,17 +130,20 @@ final class MonthGridView: NSView {
     }
 
     @objc private func showPreviousMonth() {
-        guard let next = calendar.date(byAdding: .month, value: -1, to: displayedMonthDate) else { return }
-        displayedMonthDate = next
-        onDisplayedMonthChanged?(displayedMonthDate)
-        render()
+        changeDisplayedMonth(byAdding: -1)
     }
 
     @objc private func showNextMonth() {
-        guard let next = calendar.date(byAdding: .month, value: 1, to: displayedMonthDate) else { return }
+        changeDisplayedMonth(byAdding: 1)
+    }
+
+    private func changeDisplayedMonth(byAdding months: Int) {
+        guard let next = calendar.date(byAdding: .month, value: months, to: displayedMonthDate) else { return }
         displayedMonthDate = next
         onDisplayedMonthChanged?(displayedMonthDate)
-        render()
+        if viewModel == nil {
+            render()
+        }
     }
 
     @objc private func refreshTapped() {
@@ -193,15 +187,17 @@ final class MonthGridView: NSView {
 
     private func layoutCalendar(statusBottomY: CGFloat) {
         let weekdayTopY = statusBottomY - Layout.weekdayGapBelowToolbar - Layout.weekdayRowHeight
-        let gridTopY = weekdayTopY - Layout.weekdayRowHeight
+        let gridTopY = weekdayTopY
         let gridBottomY = Layout.gridBottomInset
         let usableWidth = bounds.width - Layout.horizontalPadding * 2
         let colWidth = usableWidth / 7
         let availableGridHeight = max(gridTopY - gridBottomY, Layout.minGridHeight)
         let weeks = max(weeksInDisplayedMonth(), 1)
-        let rowHeight = max(floor(availableGridHeight / CGFloat(weeks)), Layout.minCellSize)
-        let cellWidth = max(colWidth - 6, Layout.minCellSize)
-        let cellHeight = max(rowHeight - 4, Layout.minCellSize)
+        let rowSlotHeight = max(floor(availableGridHeight / CGFloat(weeks)), Layout.minCellSize + Layout.cellGap)
+        // 格宽不得超过列宽减缝隙，否则相邻底色会重叠粘连
+        let cellWidth = colWidth - Layout.cellGap
+        let cellHeight = min(rowSlotHeight - Layout.cellGap, cellWidth + 6)
+        let cellXOffset = Layout.cellGap / 2
 
         for (index, label) in weekdayLabels.enumerated() {
             label.frame = NSRect(
@@ -220,9 +216,11 @@ final class MonthGridView: NSView {
                 continue
             }
             cell.isHidden = false
+            let rowBottomY = gridTopY - CGFloat(row + 1) * rowSlotHeight
+            let cellY = rowBottomY + (rowSlotHeight - cellHeight) / 2
             cell.frame = NSRect(
-                x: Layout.horizontalPadding + CGFloat(col) * colWidth + (colWidth - cellWidth) / 2,
-                y: gridTopY - CGFloat(row + 1) * rowHeight,
+                x: Layout.horizontalPadding + CGFloat(col) * colWidth + cellXOffset,
+                y: cellY,
                 width: cellWidth,
                 height: cellHeight
             )
@@ -252,16 +250,14 @@ final class MonthGridView: NSView {
 
         applyAppearance()
         needsLayout = true
+        layoutSubtreeIfNeeded()
     }
 
     private func applyAppearance() {
         let theme = CalendarTheme.current(for: effectiveAppearance)
-        let records = holidayRecordsForDisplay
 
         layer?.backgroundColor = theme.background.cgColor
         toolbarView.layer?.backgroundColor = theme.background.cgColor
-
-        todayHeroView.configure(theme: theme, holidayRecords: records)
 
         monthTitleLabel.textColor = theme.headerText
         statusMessageLabel.textColor = theme.weekText
@@ -294,6 +290,7 @@ final class MonthGridView: NSView {
             if slot < 1 || slot > dayCount {
                 dayCells[index].configure(
                     day: nil,
+                    date: nil,
                     isToday: false,
                     isWeekend: false,
                     markerType: .none,
@@ -329,6 +326,7 @@ final class MonthGridView: NSView {
 
             dayCells[index].configure(
                 day: slot,
+                date: currentDate,
                 isToday: isToday,
                 isWeekend: isWeekend,
                 markerType: markerType,
@@ -369,12 +367,12 @@ final class MonthGridView: NSView {
         dayCellByDay[day]?.debugNumberColor
     }
 
-    func holidayTintAppliedForTest(day: Int) -> Bool {
-        dayCellByDay[day]?.debugUsesHolidayTintForTest ?? false
+    func dayDetailColorForTest(day: Int) -> NSColor? {
+        dayCellByDay[day]?.debugDetailColor
     }
 
-    var todayHeroPillTextForTest: String {
-        todayHeroView.pillTextForTest
+    func holidayTintAppliedForTest(day: Int) -> Bool {
+        dayCellByDay[day]?.debugUsesHolidayTintForTest ?? false
     }
 
     var statusMessageForTest: String {
@@ -384,7 +382,9 @@ final class MonthGridView: NSView {
     func setDisplayedMonthForTest(_ date: Date) {
         displayedMonthDate = date
         onDisplayedMonthChanged?(date)
-        render()
+        if viewModel == nil {
+            render()
+        }
     }
 
     func applyHolidayRecordsForTest(_ records: [HolidayRecord]) {

@@ -18,30 +18,66 @@ final class CalendarViewModel {
 
     var onStateChanged: (() -> Void)?
 
-    init(service: HolidayRefreshing, initialDate: Date = Date()) {
+    private var messageClearTask: Task<Void, Never>?
+    private let messageDisplayDuration: TimeInterval
+
+    init(
+        service: HolidayRefreshing,
+        initialDate: Date = Date(),
+        messageDisplayDuration: TimeInterval = 2
+    ) {
         self.service = service
+        self.messageDisplayDuration = messageDisplayDuration
         displayedYear = CalendarGregorian.shanghai.component(.year, from: initialDate)
         holidayRecords = service.loadCached(year: displayedYear)
     }
 
     func updateDisplayedMonth(_ date: Date) {
         let year = CalendarGregorian.shanghai.component(.year, from: date)
-        guard year != displayedYear else { return }
-        displayedYear = year
-        holidayRecords = service.loadCached(year: year)
+        if year != displayedYear {
+            displayedYear = year
+            holidayRecords = service.loadCached(year: year)
+            Task { await refreshDisplayedYear(showSuccessMessage: false) }
+        }
         onStateChanged?()
     }
 
     func refreshTapped() async {
+        await refreshDisplayedYear(showSuccessMessage: true)
+    }
+
+    private func refreshDisplayedYear(showSuccessMessage: Bool) async {
+        guard isRefreshEnabled else { return }
+        let yearToFetch = displayedYear
         isRefreshEnabled = false
         defer { isRefreshEnabled = true }
 
         do {
-            holidayRecords = try await service.refresh(year: displayedYear)
-            message = "已更新"
+            let records = try await service.refresh(year: yearToFetch)
+            guard displayedYear == yearToFetch else { return }
+            holidayRecords = records
+            if showSuccessMessage {
+                message = "已更新"
+                scheduleSuccessMessageClear()
+            }
         } catch {
+            guard displayedYear == yearToFetch else { return }
+            messageClearTask?.cancel()
             message = "更新失败"
         }
         onStateChanged?()
+    }
+
+    private func scheduleSuccessMessageClear() {
+        messageClearTask?.cancel()
+        let duration = messageDisplayDuration
+        messageClearTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
+            guard let self, !Task.isCancelled else { return }
+            if self.message == "已更新" {
+                self.message = nil
+                self.onStateChanged?()
+            }
+        }
     }
 }
