@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+/* 语义色：随 html[data-theme] 切换，与 DESIGN.md 暖沙/暖炭一致 */
+:root,
+[data-theme="light"] {
+  --cp-bg: oklch(96.5% 0.012 85);
+  --cp-elevated: oklch(99% 0.008 85);
+  --cp-divider: oklch(90% 0.015 85);
+  --cp-text: oklch(22% 0.02 55);
+  --cp-muted: oklch(48% 0.02 55);
+  --cp-primary: oklch(58% 0.18 25);
+  --cp-on-primary: oklch(98% 0.01 85);
+  --cp-workday: oklch(58% 0.12 250);
+  --cp-holiday-tint: oklch(93% 0.04 25);
+  --cp-workday-tint: oklch(93% 0.04 250);
+  --cp-feature-surface: oklch(94% 0.025 25);
+}
+
+[data-theme="dark"] {
+  --cp-bg: oklch(18% 0.012 55);
+  --cp-elevated: oklch(22% 0.014 55);
+  --cp-divider: oklch(32% 0.015 55);
+  --cp-text: oklch(94% 0.015 85);
+  --cp-muted: oklch(68% 0.02 55);
+  --cp-primary: oklch(62% 0.16 25);
+  --cp-on-primary: oklch(96% 0.01 85);
+  --cp-workday: oklch(62% 0.11 250);
+  --cp-holiday-tint: oklch(26% 0.04 25);
+  --cp-workday-tint: oklch(26% 0.04 250);
+  --cp-feature-surface: oklch(24% 0.03 25);
+}
+
+@theme {
+  --color-cp-bg: var(--cp-bg);
+  --color-cp-elevated: var(--cp-elevated);
+  --color-cp-divider: var(--cp-divider);
+  --color-cp-text: var(--cp-text);
+  --color-cp-muted: var(--cp-muted);
+  --color-cp-primary: var(--cp-primary);
+  --color-cp-on-primary: var(--cp-on-primary);
+  --color-cp-workday: var(--cp-workday);
+  --color-cp-holiday-tint: var(--cp-holiday-tint);
+  --color-cp-workday-tint: var(--cp-workday-tint);
+  --color-cp-feature-surface: var(--cp-feature-surface);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    color-scheme: light;
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-cp-bg text-cp-text antialiased;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+      "Microsoft YaHei", system-ui, sans-serif;
+  }
+
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--cp-primary);
+    outline-offset: 2px;
+  }
+}

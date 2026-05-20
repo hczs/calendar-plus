@@ -1,5 +1,7 @@
 # CalendarPlus
 
+**官网：** https://calendar.caiden.asia
+
 一个基于 AppKit 的 macOS 菜单栏日历应用，支持：
 
 - 月历弹窗（节假日 / 补班角标）

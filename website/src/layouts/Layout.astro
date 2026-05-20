@@ -1,0 +1,218 @@
+---
+
+import "../styles/global.css";
+
+import ThemeToggle from "../components/ThemeToggle";
+
+
+
+interface Props {
+
+  title?: string;
+
+  description?: string;
+
+}
+
+
+
+const {
+
+  title = "CalendarPlus — macOS 菜单栏日历",
+
+  description = "轻量菜单栏月历：公历、农历、中外节日与中国法定节假日 / 补班。macOS 14+，无 Dock 图标。",
+
+} = Astro.props;
+
+
+
+const canonical = new URL(Astro.url.pathname, Astro.site);
+
+const ogImage = new URL("/screenshots/light.png", Astro.site);
+
+const githubRepo = "https://github.com/hczs/calendar-plus";
+
+const downloadUrl = `${githubRepo}/releases/latest`;
+
+---
+
+
+
+<!doctype html>
+
+<html lang="zh-CN">
+
+  <head>
+
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta name="description" content={description} />
+
+    <link rel="canonical" href={canonical} />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <meta property="og:title" content={title} />
+
+    <meta property="og:description" content={description} />
+
+    <meta property="og:url" content={canonical} />
+
+    <meta property="og:type" content="website" />
+
+    <meta property="og:locale" content="zh_CN" />
+
+    <meta property="og:image" content={ogImage} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <meta name="twitter:image" content={ogImage} />
+
+    <title>{title}</title>
+
+    <script is:inline>
+
+      (function () {
+
+        var s = localStorage.getItem("cp-theme");
+
+        var t =
+
+          s === "light" || s === "dark"
+
+            ? s
+
+            : window.matchMedia("(prefers-color-scheme: dark)").matches
+
+              ? "dark"
+
+              : "light";
+
+        document.documentElement.setAttribute("data-theme", t);
+
+      })();
+
+    </script>
+
+  </head>
+
+  <body class="min-h-dvh flex flex-col">
+
+    <header class="sticky top-0 z-10 border-b border-cp-divider bg-cp-elevated">
+
+      <nav
+
+        class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3.5"
+
+        aria-label="主导航"
+
+      >
+
+        <a href="/" class="flex items-center gap-2.5 font-medium tracking-tight">
+
+          <img src="/favicon.svg" alt="" width="28" height="28" class="rounded-md" />
+
+          <span>CalendarPlus</span>
+
+        </a>
+
+        <div class="flex items-center gap-4 text-sm sm:gap-5">
+
+          <a href="#features" class="text-cp-muted transition-colors hover:text-cp-text">
+
+            特性
+
+          </a>
+
+          <a
+
+            href={githubRepo}
+
+            class="text-cp-muted transition-colors hover:text-cp-text"
+
+            target="_blank"
+
+            rel="noopener noreferrer"
+
+          >
+
+            GitHub
+
+          </a>
+
+          <ThemeToggle client:load />
+
+          <a
+
+            href={downloadUrl}
+
+            class="rounded-lg bg-cp-primary px-4 py-2 font-medium text-cp-on-primary transition-opacity hover:opacity-90"
+
+          >
+
+            下载
+
+          </a>
+
+        </div>
+
+      </nav>
+
+    </header>
+
+
+
+    <main class="flex-1">
+
+      <slot />
+
+    </main>
+
+
+
+    <footer class="border-t border-cp-divider bg-cp-elevated">
+
+      <div
+
+        class="mx-auto flex max-w-5xl flex-col gap-3 px-5 py-8 text-sm text-cp-muted sm:flex-row sm:items-center sm:justify-between"
+
+      >
+
+        <p>© {new Date().getFullYear()} CalendarPlus</p>
+
+        <div class="flex flex-wrap gap-4">
+
+          <a
+
+            href={githubRepo}
+
+            class="transition-colors hover:text-cp-text"
+
+            target="_blank"
+
+            rel="noopener noreferrer"
+
+          >
+
+            源代码
+
+          </a>
+
+          <a href={downloadUrl} class="transition-colors hover:text-cp-text">
+
+            最新版本
+
+          </a>
+
+        </div>
+
+      </div>
+
+    </footer>
+
+  </body>
+
+</html>
+

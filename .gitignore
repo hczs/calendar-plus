@@ -5,6 +5,11 @@
 .swiftpm/
 dist/
 
+# Website (Astro)
+website/node_modules/
+website/dist/
+website/.astro/
+
 # Local editor/system files
 .DS_Store
 .vscode/
