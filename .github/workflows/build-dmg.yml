@@ -37,19 +37,31 @@ jobs:
           fi
           echo "value=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Build universal DMG
+      - name: Build DMGs (Apple Silicon & Intel)
         env:
           VERSION: ${{ steps.version.outputs.value }}
         run: ./scripts/build-dmg.sh
+
+      - name: Add stable release asset names
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for f in dist/CalendarPlus-*-arm64.dmg; do cp "$f" dist/CalendarPlus-arm64.dmg; done
+          for f in dist/CalendarPlus-*-x86_64.dmg; do cp "$f" dist/CalendarPlus-x86_64.dmg; done
+          ls -1 dist/CalendarPlus-arm64.dmg dist/CalendarPlus-x86_64.dmg
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
           name: CalendarPlus-${{ steps.version.outputs.value }}-dmg
-          path: dist/*.dmg
+          path: dist/CalendarPlus-*-*.dmg
 
       - name: Attach DMG to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.dmg
+          files: |
+            dist/CalendarPlus-arm64.dmg
+            dist/CalendarPlus-x86_64.dmg

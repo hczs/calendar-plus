@@ -6,7 +6,11 @@ import ScreenshotPreview from "../components/ScreenshotPreview";
 
 
 
-const downloadUrl = "https://github.com/hczs/calendar-plus/releases/latest";
+const releasesUrl = "https://github.com/hczs/calendar-plus/releases/latest";
+const downloadArm64 =
+  "https://github.com/hczs/calendar-plus/releases/latest/download/CalendarPlus-arm64.dmg";
+const downloadX86_64 =
+  "https://github.com/hczs/calendar-plus/releases/latest/download/CalendarPlus-x86_64.dmg";
 
 
 
@@ -66,27 +70,51 @@ const features = [
 
       </p>
 
-      <div class="mt-9 flex flex-wrap items-center justify-center gap-4 sm:justify-start">
+      <div class="mt-9 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
 
         <a
 
-          href={downloadUrl}
+          href={downloadArm64}
 
-          class="rounded-xl bg-cp-primary px-7 py-3.5 text-base font-medium text-cp-on-primary shadow-sm transition-opacity hover:opacity-90"
+          class="rounded-xl bg-cp-primary px-6 py-3.5 text-base font-medium text-cp-on-primary shadow-sm transition-opacity hover:opacity-90"
 
         >
 
-          免费下载 DMG
+          下载 · Apple 芯片
 
         </a>
 
-        <span class="text-sm text-cp-muted">
+        <a
 
-          macOS 14+ · Universal Binary
+          href={downloadX86_64}
 
-        </span>
+          class="rounded-xl border border-cp-divider bg-cp-elevated px-6 py-3.5 text-base font-medium text-cp-text transition-colors hover:bg-cp-feature-surface"
+
+        >
+
+          下载 · Intel
+
+        </a>
+
+        <a
+
+          href={releasesUrl}
+
+          class="text-sm text-cp-muted underline-offset-4 hover:underline"
+
+        >
+
+          全部 Release
+
+        </a>
 
       </div>
+
+      <p class="mt-4 text-sm text-cp-muted text-center sm:text-left">
+
+        macOS 14+ · 请按本机芯片选择 DMG（关于本机 → 芯片）
+
+      </p>
 
     </div>
 
@@ -148,21 +176,37 @@ const features = [
 
       <p class="text-cp-muted mb-8 text-sm">
 
-        下载 DMG，拖入「应用程序」文件夹。点击菜单栏日历图标即可弹出月历。
+        按芯片下载 DMG，拖入「应用程序」文件夹。点击菜单栏日历图标即可弹出月历。
 
       </p>
 
-      <a
+      <div class="flex flex-wrap justify-center gap-3 sm:justify-start">
 
-        href={downloadUrl}
+        <a
 
-        class="inline-flex rounded-xl bg-cp-primary px-7 py-3.5 font-medium text-cp-on-primary transition-opacity hover:opacity-90"
+          href={downloadArm64}
 
-      >
+          class="inline-flex rounded-xl bg-cp-primary px-6 py-3.5 font-medium text-cp-on-primary transition-opacity hover:opacity-90"
 
-        前往 GitHub 下载最新版
+        >
 
-      </a>
+          Apple 芯片
+
+        </a>
+
+        <a
+
+          href={downloadX86_64}
+
+          class="inline-flex rounded-xl border border-cp-divider px-6 py-3.5 font-medium text-cp-text transition-colors hover:bg-cp-feature-surface"
+
+        >
+
+          Intel
+
+        </a>
+
+      </div>
 
     </div>
 
