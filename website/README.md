@@ -8,8 +8,8 @@ Astro 5 + React islands + Tailwind CSS 4。构建产物为静态文件，部署�
 
 ```bash
 cd website
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 浏览器打开 http://localhost:4321
@@ -17,8 +17,8 @@ npm run dev
 ## 构建
 
 ```bash
-npm run build
-npm run preview   # 预览 dist/
+pnpm build
+pnpm preview   # 预览 dist/
 ```
 
 ## 截图
@@ -41,7 +41,9 @@ cp ../docs/dark.png ../docs/light.png ../docs/settings.png public/screenshots/
 | 设置 | 值 |
 |------|-----|
 | Root directory | `website` |
-| Build command | `npm run build` |
+| Framework preset | **Astro**（或 None） |
+| Build command | `pnpm install && pnpm build` |
+| Node.js version | `22`（Environment variables → `NODE_VERSION` = `22`） |
 | Build output | `dist` |
 | Production branch | `main` |
 
