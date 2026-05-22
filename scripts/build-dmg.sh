@@ -41,6 +41,13 @@ UNIVERSAL_BIN="$MACOS_DIR/$PRODUCT_NAME"
 lipo -create -output "$UNIVERSAL_BIN" "$ARM_BIN" "$X64_BIN"
 chmod +x "$UNIVERSAL_BIN"
 
+APP_ICON="$ROOT_DIR/CalendarPlus/Resources/AppIcon.icns"
+if [[ ! -f "$APP_ICON" ]]; then
+  echo "Missing app icon. Run: swiftc scripts/generate-icons.swift -o /tmp/generate-icons -framework AppKit && /tmp/generate-icons \"$ROOT_DIR\"" >&2
+  exit 1
+fi
+cp "$APP_ICON" "$RESOURCES_DIR/AppIcon.icns"
+
 cat > "$CONTENTS_DIR/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -62,6 +69,8 @@ cat > "$CONTENTS_DIR/Info.plist" <<EOF
   <string>APPL</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
 </dict>
 </plist>
 EOF

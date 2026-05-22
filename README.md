@@ -1,5 +1,9 @@
 # CalendarPlus
 
+<p align="center">
+  <img src="Brand/logo.jpeg" alt="CalendarPlus" width="120" />
+</p>
+
 一个基于 AppKit 的 macOS 菜单栏日历应用，支持：
 
 - 月历弹窗（节假日 / 补班角标）
@@ -15,6 +19,18 @@
 
 ```bash
 ./start.sh
+```
+
+## 图标
+
+- **应用图标**：品牌源文件 `Brand/logo.jpeg`。更新后运行下方命令重新生成 `AppIcon.icns`。
+- **菜单栏图标**：使用 SF Symbol `calendar`（单色 template，随系统深浅色反色）。设置里「今日日期」模式会显示当天数字，类似系统日历。
+
+更新应用图标：
+
+```bash
+swiftc scripts/generate-icons.swift -o /tmp/generate-icons -framework AppKit
+/tmp/generate-icons "$(pwd)"
 ```
 
 ## 测试

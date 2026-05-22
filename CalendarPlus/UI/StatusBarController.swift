@@ -12,7 +12,7 @@ final class StatusBarController: NSObject {
         self.settingsStore = settingsStore
         self.popoverController = PopoverController(settingsStore: settingsStore)
         super.init()
-        updateTitle()
+        updateStatusItemAppearance()
         statusItem.button?.target = self
         statusItem.button?.action = #selector(togglePopover)
         settingsObserver = NotificationCenter.default.addObserver(
@@ -21,7 +21,7 @@ final class StatusBarController: NSObject {
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.updateTitle()
+                self?.updateStatusItemAppearance()
             }
         }
         activeObserver = NotificationCenter.default.addObserver(
@@ -30,7 +30,7 @@ final class StatusBarController: NSObject {
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.updateTitle()
+                self?.updateStatusItemAppearance()
             }
         }
     }
@@ -39,11 +39,21 @@ final class StatusBarController: NSObject {
         popoverController.toggle(relativeTo: statusItem.button)
     }
 
-    private func updateTitle() {
-        statusItem.button?.title = StatusBarTitleFormatter.title(
-            for: settingsStore.statusIconMode,
-            on: Date(),
-            calendar: CalendarGregorian.shanghai
-        )
+    private func updateStatusItemAppearance() {
+        guard let button = statusItem.button else { return }
+        switch settingsStore.statusIconMode {
+        case .fixedIcon:
+            button.title = ""
+            button.image = AppBrandResources.statusBarIcon()
+            button.imagePosition = .imageOnly
+        case .todayDate:
+            button.image = nil
+            button.imagePosition = .noImage
+            button.title = StatusBarTitleFormatter.title(
+                for: .todayDate,
+                on: Date(),
+                calendar: CalendarGregorian.shanghai
+            )
+        }
     }
 }
