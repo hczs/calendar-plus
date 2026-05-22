@@ -12,7 +12,8 @@ let package = Package(
         .target(
             name: "CalendarPlus",
             path: "CalendarPlus",
-            exclude: ["Info.plist"]
+            exclude: ["Info.plist"],
+            resources: [.process("Resources")]
         ),
         .executableTarget(
             name: "CalendarPlusApp",

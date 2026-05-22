@@ -1,5 +1,9 @@
 # CalendarPlus
 
+<p align="center">
+  <img src="Brand/logo.jpeg" alt="CalendarPlus" width="120" />
+</p>
+
 **macOS 菜单栏日历 · 点开三秒看清今天**
 
 [![Build DMG](https://github.com/hczs/calendar-plus/actions/workflows/build-dmg.yml/badge.svg)](https://github.com/hczs/calendar-plus/actions/workflows/build-dmg.yml)
@@ -79,10 +83,23 @@ calendar-plus/
 ├── CalendarPlus/          # 应用核心库（UI、节假日、设置等）
 ├── CalendarPlusApp/       # 可执行入口
 ├── CalendarPlusTests/     # 单元 / UI 测试
+├── Brand/                 # 品牌 logo 源文件
 ├── scripts/build-dmg.sh   # 分架构（arm64 / x86_64）DMG 打包脚本
 ├── website/               # 官网（Astro + React + Tailwind）
 ├── docs/                  # 设计说明、截图、手工验收清单
 └── .github/workflows/     # CI：构建并发布 DMG
+```
+
+### 图标
+
+- **应用图标**：品牌源文件 `Brand/logo.jpeg`，生成 `CalendarPlus/Resources/AppIcon.icns` 并打入 DMG。
+- **菜单栏图标**：SF Symbol `calendar`（单色 template，随系统深浅色反色）。设置里「今日日期」模式显示当天数字。
+
+更新应用图标：
+
+```bash
+swiftc scripts/generate-icons.swift -o /tmp/generate-icons -framework AppKit
+/tmp/generate-icons "$(pwd)"
 ```
 
 ### 测试

@@ -7,6 +7,12 @@ EXECUTABLE_NAME="${EXECUTABLE_NAME:-CalendarPlusApp}"
 VERSION="${VERSION:-$(git -C "$ROOT_DIR" rev-parse --short HEAD)}"
 OUT_DIR="${OUT_DIR:-$ROOT_DIR/dist}"
 BUILD_DIR="$ROOT_DIR/.build"
+APP_ICON="$ROOT_DIR/CalendarPlus/Resources/AppIcon.icns"
+
+if [[ ! -f "$APP_ICON" ]]; then
+  echo "Missing app icon. Run: swiftc scripts/generate-icons.swift -o /tmp/generate-icons -framework AppKit && /tmp/generate-icons \"$ROOT_DIR\"" >&2
+  exit 1
+fi
 
 write_info_plist() {
   local plist_path="$1"
@@ -31,6 +37,8 @@ write_info_plist() {
   <string>APPL</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
 </dict>
 </plist>
 EOF
@@ -61,6 +69,7 @@ build_dmg_for_arch() {
 
   cp "$bin_path" "$macos_dir/$PRODUCT_NAME"
   chmod +x "$macos_dir/$PRODUCT_NAME"
+  cp "$APP_ICON" "$resources_dir/AppIcon.icns"
   write_info_plist "$contents_dir/Info.plist"
 
   echo "==> Creating DMG: $dmg_path"
