@@ -1,0 +1,216 @@
+---
+
+import Layout from "../layouts/Layout.astro";
+
+import ScreenshotPreview from "../components/ScreenshotPreview";
+
+
+
+const releasesUrl = "https://github.com/hczs/calendar-plus/releases/latest";
+const downloadArm64 =
+  "https://github.com/hczs/calendar-plus/releases/latest/download/CalendarPlus-arm64.dmg";
+const downloadX86_64 =
+  "https://github.com/hczs/calendar-plus/releases/latest/download/CalendarPlus-x86_64.dmg";
+
+
+
+const features = [
+
+  {
+
+    title: "今天一眼可见",
+
+    body: "月历格内描边环与加粗公历突出今天；切换月份时仍能定位当前日期。",
+
+  },
+
+  {
+
+    title: "休班语义上色",
+
+    body: "法定节假日与补班用整格淡色底区分，不用晦涩三角角标；节日与农历一行副文案。",
+
+  },
+
+  {
+
+    title: "极致轻量",
+
+    body: "菜单栏常驻、无 Dock 图标；联网仅首次与手动刷新，低内存、快冷启动。",
+
+  },
+
+];
+
+---
+
+
+
+<Layout>
+
+  <section class="mx-auto max-w-5xl px-5 pt-16 pb-16 sm:pb-20">
+
+    <div class="max-w-2xl mx-auto text-center sm:mx-0 sm:text-left">
+
+      <p class="mb-4 text-sm font-medium tracking-wide text-cp-primary uppercase">
+
+        macOS 菜单栏日历
+
+      </p>
+
+      <h1 class="text-4xl font-semibold tracking-tight sm:text-5xl text-balance">
+
+        点开菜单栏，<br class="hidden sm:inline" />三秒看清今天
+
+      </h1>
+
+      <p class="mt-5 text-lg text-cp-muted text-pretty">
+
+        公历、农历、中外节日，以及中国法定节假日与补班。像桌边老黄历，安静可信，不做日程管理。
+
+      </p>
+
+      <div class="mt-9 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
+
+        <a
+
+          href={downloadArm64}
+
+          class="rounded-xl bg-cp-primary px-6 py-3.5 text-base font-medium text-cp-on-primary shadow-sm transition-opacity hover:opacity-90"
+
+        >
+
+          下载 · Apple 芯片
+
+        </a>
+
+        <a
+
+          href={downloadX86_64}
+
+          class="rounded-xl border border-cp-divider bg-cp-elevated px-6 py-3.5 text-base font-medium text-cp-text transition-colors hover:bg-cp-feature-surface"
+
+        >
+
+          下载 · Intel
+
+        </a>
+
+        <a
+
+          href={releasesUrl}
+
+          class="text-sm text-cp-muted underline-offset-4 hover:underline"
+
+        >
+
+          全部 Release
+
+        </a>
+
+      </div>
+
+      <p class="mt-4 text-sm text-cp-muted text-center sm:text-left">
+
+        macOS 14+ · 请按本机芯片选择 DMG（关于本机 → 芯片）
+
+      </p>
+
+    </div>
+
+  </section>
+
+
+
+  <section class="mx-auto max-w-3xl px-5 pb-16 sm:pb-20" aria-label="应用截图">
+
+    <ScreenshotPreview client:load />
+
+  </section>
+
+
+
+  <section id="features" class="border-t border-cp-divider bg-cp-elevated/60">
+
+    <div class="mx-auto max-w-2xl px-5 py-16 sm:py-20">
+
+      <h2 class="text-2xl font-semibold tracking-tight mb-3 sm:mb-4">为快速确认而设计</h2>
+
+      <p class="text-cp-muted text-sm mb-10 max-w-prose">
+
+        不做日程管理，只回答「今天几号、休不休、有什么节」。
+
+      </p>
+
+      <ul class="flex flex-col gap-6">
+
+        {
+
+          features.map((f) => (
+
+            <li class="rounded-[10px] bg-cp-feature-surface px-6 py-5">
+
+              <h3 class="font-semibold mb-2 text-cp-text">{f.title}</h3>
+
+              <p class="text-sm text-cp-muted leading-relaxed">{f.body}</p>
+
+            </li>
+
+          ))
+
+        }
+
+      </ul>
+
+    </div>
+
+  </section>
+
+
+
+  <section class="mx-auto max-w-5xl px-5 py-16 sm:py-20">
+
+    <div class="max-w-md sm:text-left text-center sm:mx-0 mx-auto">
+
+      <h2 class="text-2xl font-semibold tracking-tight mb-4">开始使用</h2>
+
+      <p class="text-cp-muted mb-8 text-sm">
+
+        按芯片下载 DMG，拖入「应用程序」文件夹。点击菜单栏日历图标即可弹出月历。
+
+      </p>
+
+      <div class="flex flex-wrap justify-center gap-3 sm:justify-start">
+
+        <a
+
+          href={downloadArm64}
+
+          class="inline-flex rounded-xl bg-cp-primary px-6 py-3.5 font-medium text-cp-on-primary transition-opacity hover:opacity-90"
+
+        >
+
+          Apple 芯片
+
+        </a>
+
+        <a
+
+          href={downloadX86_64}
+
+          class="inline-flex rounded-xl border border-cp-divider px-6 py-3.5 font-medium text-cp-text transition-colors hover:bg-cp-feature-surface"
+
+        >
+
+          Intel
+
+        </a>
+
+      </div>
+
+    </div>
+
+  </section>
+
+</Layout>
+

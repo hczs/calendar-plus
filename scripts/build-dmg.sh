@@ -7,48 +7,16 @@ EXECUTABLE_NAME="${EXECUTABLE_NAME:-CalendarPlusApp}"
 VERSION="${VERSION:-$(git -C "$ROOT_DIR" rev-parse --short HEAD)}"
 OUT_DIR="${OUT_DIR:-$ROOT_DIR/dist}"
 BUILD_DIR="$ROOT_DIR/.build"
-STAGE_DIR="$OUT_DIR/stage"
-APP_DIR="$STAGE_DIR/$PRODUCT_NAME.app"
-CONTENTS_DIR="$APP_DIR/Contents"
-MACOS_DIR="$CONTENTS_DIR/MacOS"
-RESOURCES_DIR="$CONTENTS_DIR/Resources"
-DMG_PATH="$OUT_DIR/${PRODUCT_NAME}-${VERSION}.dmg"
-
-echo "==> Building $EXECUTABLE_NAME for arm64"
-swift build -c release --arch arm64 --product "$EXECUTABLE_NAME"
-
-echo "==> Building $EXECUTABLE_NAME for x86_64"
-swift build -c release --arch x86_64 --product "$EXECUTABLE_NAME"
-
-ARM_BIN="$BUILD_DIR/arm64-apple-macosx/release/$EXECUTABLE_NAME"
-X64_BIN="$BUILD_DIR/x86_64-apple-macosx/release/$EXECUTABLE_NAME"
-
-if [[ ! -x "$ARM_BIN" ]]; then
-  echo "Missing arm64 binary: $ARM_BIN" >&2
-  exit 1
-fi
-
-if [[ ! -x "$X64_BIN" ]]; then
-  echo "Missing x86_64 binary: $X64_BIN" >&2
-  exit 1
-fi
-
-echo "==> Preparing app bundle"
-rm -rf "$STAGE_DIR"
-mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
-
-UNIVERSAL_BIN="$MACOS_DIR/$PRODUCT_NAME"
-lipo -create -output "$UNIVERSAL_BIN" "$ARM_BIN" "$X64_BIN"
-chmod +x "$UNIVERSAL_BIN"
-
 APP_ICON="$ROOT_DIR/CalendarPlus/Resources/AppIcon.icns"
+
 if [[ ! -f "$APP_ICON" ]]; then
   echo "Missing app icon. Run: swiftc scripts/generate-icons.swift -o /tmp/generate-icons -framework AppKit && /tmp/generate-icons \"$ROOT_DIR\"" >&2
   exit 1
 fi
-cp "$APP_ICON" "$RESOURCES_DIR/AppIcon.icns"
 
-cat > "$CONTENTS_DIR/Info.plist" <<EOF
+write_info_plist() {
+  local plist_path="$1"
+  cat > "$plist_path" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -74,12 +42,49 @@ cat > "$CONTENTS_DIR/Info.plist" <<EOF
 </dict>
 </plist>
 EOF
+}
 
-echo "==> Creating DMG: $DMG_PATH"
+build_dmg_for_arch() {
+  local arch="$1"
+  local arch_label="$2"
+  local stage_dir="$OUT_DIR/stage-${arch}"
+  local app_dir="$stage_dir/$PRODUCT_NAME.app"
+  local contents_dir="$app_dir/Contents"
+  local macos_dir="$contents_dir/MacOS"
+  local resources_dir="$contents_dir/Resources"
+  local dmg_path="$OUT_DIR/${PRODUCT_NAME}-${VERSION}-${arch_label}.dmg"
+  local bin_path="$BUILD_DIR/${arch}-apple-macosx/release/$EXECUTABLE_NAME"
+
+  echo "==> Building $EXECUTABLE_NAME for $arch ($arch_label)"
+  swift build -c release --arch "$arch" --product "$EXECUTABLE_NAME"
+
+  if [[ ! -x "$bin_path" ]]; then
+    echo "Missing binary: $bin_path" >&2
+    exit 1
+  fi
+
+  echo "==> Preparing app bundle ($arch_label)"
+  rm -rf "$stage_dir"
+  mkdir -p "$macos_dir" "$resources_dir"
+
+  cp "$bin_path" "$macos_dir/$PRODUCT_NAME"
+  chmod +x "$macos_dir/$PRODUCT_NAME"
+  cp "$APP_ICON" "$resources_dir/AppIcon.icns"
+  write_info_plist "$contents_dir/Info.plist"
+
+  echo "==> Creating DMG: $dmg_path"
+  mkdir -p "$OUT_DIR"
+  rm -f "$dmg_path"
+  hdiutil create -volname "$PRODUCT_NAME" -srcfolder "$app_dir" -ov -format UDZO "$dmg_path" >/dev/null
+
+  file "$macos_dir/$PRODUCT_NAME"
+  echo "DMG: $dmg_path"
+}
+
 mkdir -p "$OUT_DIR"
-rm -f "$DMG_PATH"
-hdiutil create -volname "$PRODUCT_NAME" -srcfolder "$APP_DIR" -ov -format UDZO "$DMG_PATH" >/dev/null
+
+build_dmg_for_arch arm64 arm64
+build_dmg_for_arch x86_64 x86_64
 
 echo "==> Done"
-file "$UNIVERSAL_BIN"
-echo "DMG: $DMG_PATH"
+ls -1 "$OUT_DIR"/${PRODUCT_NAME}-${VERSION}-*.dmg
