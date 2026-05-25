@@ -7,6 +7,13 @@ final class StatusBarController: NSObject {
     private let settingsStore: SettingsStore
     private var settingsObserver: NSObjectProtocol?
     private var activeObserver: NSObjectProtocol?
+    private lazy var contextMenu: NSMenu = {
+        let menu = NSMenu()
+        let quitItem = NSMenuItem(title: "退出", action: #selector(quitApplication), keyEquivalent: "")
+        quitItem.target = self
+        menu.addItem(quitItem)
+        return menu
+    }()
 
     init(settingsStore: SettingsStore = SettingsStore()) {
         self.settingsStore = settingsStore
@@ -14,7 +21,8 @@ final class StatusBarController: NSObject {
         super.init()
         updateStatusItemAppearance()
         statusItem.button?.target = self
-        statusItem.button?.action = #selector(togglePopover)
+        statusItem.button?.action = #selector(statusBarButtonClicked)
+        statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         settingsObserver = NotificationCenter.default.addObserver(
             forName: .settingsStoreDidChange,
             object: settingsStore,
@@ -35,8 +43,17 @@ final class StatusBarController: NSObject {
         }
     }
 
-    @objc private func togglePopover() {
-        popoverController.toggle(relativeTo: statusItem.button)
+    @objc private func statusBarButtonClicked(_ sender: NSStatusBarButton) {
+        guard let event = NSApp.currentEvent else { return }
+        if event.type == .rightMouseUp {
+            contextMenu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height), in: sender)
+            return
+        }
+        popoverController.toggle(relativeTo: sender)
+    }
+
+    @objc private func quitApplication() {
+        NSApp.terminate(nil)
     }
 
     private func updateStatusItemAppearance() {
