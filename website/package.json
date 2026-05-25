@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "sync:logo": "cp ../Brand/logo-prepared.png public/logo.png && sips -z 32 32 ../Brand/logo-prepared.png --out public/favicon-32.png && sips -z 16 16 ../Brand/logo-prepared.png --out public/favicon-16.png && sips -z 180 180 ../Brand/logo-prepared.png --out public/apple-touch-icon.png"
   },
   "dependencies": {
     "@astrojs/react": "^4.2.0",

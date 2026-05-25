@@ -11,6 +11,39 @@ fileprivate let squircleCornerFraction: CGFloat = 0.2237
 /// Keep artwork slightly inside the mask so corners are not clipped in Dock.
 fileprivate let artworkInsetFraction: CGFloat = 0.06
 
+fileprivate let iconsetSizes: [(String, Int)] = [
+    ("icon_16x16.png", 16),
+    ("icon_16x16@2x.png", 32),
+    ("icon_32x32.png", 32),
+    ("icon_32x32@2x.png", 64),
+    ("icon_128x128.png", 128),
+    ("icon_128x128@2x.png", 256),
+    ("icon_256x256.png", 256),
+    ("icon_256x256@2x.png", 512),
+    ("icon_512x512.png", 512),
+    ("icon_512x512@2x.png", 1024),
+]
+
+fileprivate func preparedLogoURL(root: URL) -> URL {
+    root.appendingPathComponent("Brand/logo-prepared.png")
+}
+
+fileprivate func preparedLogoExists(root: URL) -> Bool {
+    FileManager.default.fileExists(atPath: preparedLogoURL(root: root).path)
+}
+
+fileprivate func loadPreparedLogo(from root: URL) throws -> NSImage {
+    let logoURL = preparedLogoURL(root: root)
+    guard let image = NSImage(contentsOf: logoURL) else {
+        throw NSError(
+            domain: "generate-icons",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Missing or unreadable logo at \(logoURL.path)"]
+        )
+    }
+    return image
+}
+
 fileprivate func loadLogo(from root: URL) throws -> NSImage {
     let logoURL = root.appendingPathComponent("Brand/logo.jpeg")
     guard let image = NSImage(contentsOf: logoURL) else {
@@ -124,7 +157,51 @@ fileprivate func aspectFillRect(contentSize: NSSize, in dest: CGRect) -> CGRect 
     )
 }
 
-fileprivate func renderLogo(_ source: NSImage, size: Int, url: URL) throws {
+/// Draw source into a square PNG, preserving existing alpha (for pre-rounded `logo-prepared.png`).
+fileprivate func renderPreparedLogo(_ source: NSImage, size: Int, url: URL) throws {
+    let pixels = size
+    let rep = NSBitmapImageRep(
+        bitmapDataPlanes: nil,
+        pixelsWide: pixels,
+        pixelsHigh: pixels,
+        bitsPerSample: 8,
+        samplesPerPixel: 4,
+        hasAlpha: true,
+        isPlanar: false,
+        colorSpaceName: .deviceRGB,
+        bytesPerRow: 0,
+        bitsPerPixel: 0
+    )!
+    rep.size = NSSize(width: pixels, height: pixels)
+
+    guard let context = NSGraphicsContext(bitmapImageRep: rep) else {
+        throw NSError(domain: "generate-icons", code: 2)
+    }
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = context
+    defer { NSGraphicsContext.restoreGraphicsState() }
+
+    let canvas = CGRect(x: 0, y: 0, width: CGFloat(pixels), height: CGFloat(pixels))
+    context.cgContext.clear(canvas)
+
+    let drawRect = aspectFillRect(contentSize: source.size, in: canvas)
+    source.draw(
+        in: drawRect,
+        from: .zero,
+        operation: .sourceOver,
+        fraction: 1,
+        respectFlipped: true,
+        hints: [.interpolation: NSImageInterpolation.high]
+    )
+
+    guard let png = rep.representation(using: .png, properties: [:]) else {
+        throw NSError(domain: "generate-icons", code: 3)
+    }
+    try png.write(to: url)
+}
+
+/// Draw source with an extra squircle clip (for flat logo.jpeg fallback).
+fileprivate func renderLogoWithSquircle(_ source: NSImage, size: Int, url: URL) throws {
     let pixels = size
     let rep = NSBitmapImageRep(
         bitmapDataPlanes: nil,
@@ -174,42 +251,8 @@ fileprivate func renderLogo(_ source: NSImage, size: Int, url: URL) throws {
 }
 
 fileprivate func writePreparedBrandPNG(logo: NSImage, root: URL) throws {
-    let url = root.appendingPathComponent("Brand/logo-prepared.png")
-    try renderLogo(logo, size: 1024, url: url)
-}
-
-/// Xcode `AppIcon.appiconset` filenames → `iconutil` `.iconset` filenames.
-fileprivate let appIconsetToIconset: [(String, String)] = [
-    ("icon_16pt@1x.png", "icon_16x16.png"),
-    ("icon_16pt@2x.png", "icon_16x16@2x.png"),
-    ("icon_32pt@1x.png", "icon_32x32.png"),
-    ("icon_32pt@2x.png", "icon_32x32@2x.png"),
-    ("icon_128pt@1x.png", "icon_128x128.png"),
-    ("icon_128pt@2x.png", "icon_128x128@2x.png"),
-    ("icon_256pt@1x.png", "icon_256x256.png"),
-    ("icon_256pt@2x.png", "icon_256x256@2x.png"),
-    ("icon_512pt@1x.png", "icon_512x512.png"),
-    ("icon_512pt@2x.png", "icon_512x512@2x.png"),
-]
-
-fileprivate func appIconsetURL(root: URL) -> URL {
-    root.appendingPathComponent("Brand/AppIcon.appiconset", isDirectory: true)
-}
-
-fileprivate func appIconsetIsComplete(at url: URL) -> Bool {
-    let fm = FileManager.default
-    guard fm.fileExists(atPath: url.path) else { return false }
-    return appIconsetToIconset.allSatisfy { fm.fileExists(atPath: url.appendingPathComponent($0.0).path) }
-}
-
-fileprivate func writeIconsetFromAppIconset(root: URL, iconsetURL: URL) throws {
-    let source = appIconsetURL(root: root)
-    try FileManager.default.createDirectory(at: iconsetURL, withIntermediateDirectories: true)
-    for (from, to) in appIconsetToIconset {
-        let src = source.appendingPathComponent(from)
-        let dst = iconsetURL.appendingPathComponent(to)
-        try FileManager.default.copyItem(at: src, to: dst)
-    }
+    let url = preparedLogoURL(root: root)
+    try renderLogoWithSquircle(logo, size: 1024, url: url)
 }
 
 fileprivate func writeIcns(from iconsetURL: URL, icnsURL: URL) throws {
@@ -223,23 +266,25 @@ fileprivate func writeIcns(from iconsetURL: URL, icnsURL: URL) throws {
     }
 }
 
-fileprivate func writeIconset(logo: NSImage, iconsetURL: URL) throws {
-    let sizes: [(String, Int)] = [
-        ("icon_16x16.png", 16),
-        ("icon_16x16@2x.png", 32),
-        ("icon_32x32.png", 32),
-        ("icon_32x32@2x.png", 64),
-        ("icon_128x128.png", 128),
-        ("icon_128x128@2x.png", 256),
-        ("icon_256x256.png", 256),
-        ("icon_256x256@2x.png", 512),
-        ("icon_512x512.png", 512),
-        ("icon_512x512@2x.png", 1024),
-    ]
+fileprivate func writeIconset(
+    logo: NSImage,
+    iconsetURL: URL,
+    render: (_ source: NSImage, _ size: Int, _ url: URL) throws -> Void
+) throws {
     try FileManager.default.createDirectory(at: iconsetURL, withIntermediateDirectories: true)
-    for (name, size) in sizes {
-        try renderLogo(logo, size: size, url: iconsetURL.appendingPathComponent(name))
+    for (name, size) in iconsetSizes {
+        try render(logo, size, iconsetURL.appendingPathComponent(name))
     }
+}
+
+fileprivate func generateIcns(logo: NSImage, resources: URL, render: (_ source: NSImage, _ size: Int, _ url: URL) throws -> Void) throws -> URL {
+    let iconset = resources.appendingPathComponent("AppIcon.iconset", isDirectory: true)
+    let icns = resources.appendingPathComponent("AppIcon.icns")
+    try? FileManager.default.removeItem(at: iconset)
+    try writeIconset(logo: logo, iconsetURL: iconset, render: render)
+    try writeIcns(from: iconset, icnsURL: icns)
+    try? FileManager.default.removeItem(at: iconset)
+    return icns
 }
 
 func main() throws {
@@ -247,26 +292,19 @@ func main() throws {
     let resources = root.appendingPathComponent("CalendarPlus/Resources", isDirectory: true)
     try FileManager.default.createDirectory(at: resources, withIntermediateDirectories: true)
 
-    let iconset = resources.appendingPathComponent("AppIcon.iconset", isDirectory: true)
-    let icns = resources.appendingPathComponent("AppIcon.icns")
-    try? FileManager.default.removeItem(at: iconset)
-
-    if appIconsetIsComplete(at: appIconsetURL(root: root)) {
-        try writeIconsetFromAppIconset(root: root, iconsetURL: iconset)
-        try writeIcns(from: iconset, icnsURL: icns)
-        try? FileManager.default.removeItem(at: iconset)
-        print("Wrote \(icns.path) from Brand/AppIcon.appiconset")
+    if preparedLogoExists(root: root) {
+        let logo = try loadPreparedLogo(from: root)
+        let icns = try generateIcns(logo: logo, resources: resources, render: renderPreparedLogo)
+        print("Wrote \(icns.path) from Brand/logo-prepared.png")
         return
     }
 
     let raw = try loadLogo(from: root)
     let logo = try prepareLogo(raw)
     try writePreparedBrandPNG(logo: logo, root: root)
-    try writeIconset(logo: logo, iconsetURL: iconset)
-    try writeIcns(from: iconset, icnsURL: icns)
-    try? FileManager.default.removeItem(at: iconset)
-    print("Wrote icons to \(resources.path)")
-    print("Wrote preview to \(root.appendingPathComponent("Brand/logo-prepared.png").path)")
+    let icns = try generateIcns(logo: logo, resources: resources, render: renderLogoWithSquircle)
+    print("Wrote \(icns.path) from Brand/logo.jpeg")
+    print("Wrote preview to \(preparedLogoURL(root: root).path)")
 }
 
 try main()

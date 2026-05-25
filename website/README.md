@@ -21,6 +21,16 @@ pnpm build
 pnpm preview   # 预览 dist/
 ```
 
+## Logo
+
+与仓库根 [README](../README.md#品牌与图标) 共用 **`Brand/logo-prepared.png`**。更新源文件后执行：
+
+```bash
+pnpm sync:logo
+```
+
+写入 `public/logo.png`、`favicon-16.png`、`favicon-32.png`、`apple-touch-icon.png`（导航、首页、favicon、`apple-touch-icon`）。应用 `AppIcon.icns` 需另跑 `scripts/generate-icons.swift`。
+
 ## 截图
 
 将应用截图放入 `public/screenshots/`（与仓库根 `docs/` 中命名一致即可）：
