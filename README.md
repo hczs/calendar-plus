@@ -1,7 +1,7 @@
 # CalendarPlus
 
 <p align="center">
-  <img src="Brand/logo.jpeg" alt="CalendarPlus" width="120" />
+  <img src="Brand/logo-prepared.png" alt="CalendarPlus" width="120" />
 </p>
 
 **macOS 菜单栏日历 · 点开三秒看清今天**
@@ -92,7 +92,7 @@ calendar-plus/
 
 ### 图标
 
-- **应用图标**：品牌源文件 `Brand/logo.jpeg`，生成 `CalendarPlus/Resources/AppIcon.icns` 并打入 DMG。
+- **应用图标**：优先使用 `Brand/AppIcon.appiconset`（各尺寸 PNG）生成 `CalendarPlus/Resources/AppIcon.icns` 并打入 DMG；若该目录不完整，则回退到 `Brand/logo.jpeg`（脚本会自动裁掉留白、按 macOS squircle 铺满），预览图见 `Brand/logo-prepared.png`。
 - **菜单栏图标**：SF Symbol `calendar`（单色 template，随系统深浅色反色）。设置里「今日日期」模式显示当天数字。
 
 更新应用图标：
