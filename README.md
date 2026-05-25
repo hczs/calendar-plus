@@ -45,8 +45,14 @@ CalendarPlus 是一款基于 **AppKit** 的 macOS 菜单栏日历工具（无 Do
 安装步骤：
 
 1. 下载与你 Mac 匹配的 DMG
-2. 打开 DMG，将 **CalendarPlus** 拖入「应用程序」
-3. 按下方说明处理 macOS 安全提示后启动
+2. 打开 DMG，将 **CalendarPlus** 拖入 **应用程序（Applications）**
+3. 在终端执行以下命令，移除 macOS 为未签名应用添加的隔离属性：
+
+```bash
+xattr -cr /Applications/CalendarPlus.app
+```
+
+4. 打开「应用程序」，双击 **CalendarPlus** 启动
 
 ### 关于「无法打开」或「移到废纸篓」
 
@@ -57,29 +63,7 @@ CalendarPlus 是一款基于 **AppKit** 的 macOS 菜单栏日历工具（无 Do
 - 「CalendarPlus 已损坏，无法打开。你应该将它移到废纸篓。」
 - 或「无法验证开发者」「Apple 无法检查其是否包含恶意软件」
 
-**推荐做法（任选其一）：**
-
-**方法一：右键打开（最简单）**
-
-1. 在「应用程序」中找到 **CalendarPlus**
-2. **按住 Control 键点击**（或右键）→ 选择 **打开**
-3. 在弹窗中再次点 **打开**（仅需首次确认一次）
-
-**方法二：系统设置**
-
-1. 先尝试双击打开一次（会被拦截）
-2. 打开 **系统设置** → **隐私与安全性**
-3. 在页面下方找到关于 CalendarPlus 的说明，点 **仍要打开**
-
-**方法三：终端移除隔离属性**
-
-若上述方式仍无效，在终端执行（将路径换成你的实际安装位置）：
-
-```bash
-xattr -cr /Applications/CalendarPlus.app
-```
-
-然后照常双击打开。
+按上方安装步骤将应用放入「应用程序」并执行 `xattr -cr` 后，再双击打开即可。若安装路径不是默认位置，把命令中的路径改成你的 `.app` 实际路径。
 
 > CI 会分别构建 **arm64** 与 **x86_64** 两个 DMG（非 Universal Binary）。打 `v*` 标签发布时，Release 中会附带固定文件名的 `CalendarPlus-arm64.dmg` 与 `CalendarPlus-x86_64.dmg`，便于 `releases/latest/download/...` 直链。
 
