@@ -46,7 +46,40 @@ CalendarPlus 是一款基于 **AppKit** 的 macOS 菜单栏日历工具（无 Do
 
 1. 下载与你 Mac 匹配的 DMG
 2. 打开 DMG，将 **CalendarPlus** 拖入「应用程序」
-3. 首次启动若被 Gatekeeper 拦截：系统设置 → 隐私与安全性 → 仍要打开
+3. 按下方说明处理 macOS 安全提示后启动
+
+### 关于「无法打开」或「移到废纸篓」
+
+本项目的 DMG **未使用 Apple 开发者账号签名，也未做公证（Notarization）**。这是个人开源发布的正常情况，**不代表应用损坏或含恶意代码**，只是 macOS Gatekeeper 对未认证开发者的限制。
+
+首次打开时，你可能会看到类似提示：
+
+- 「CalendarPlus 已损坏，无法打开。你应该将它移到废纸篓。」
+- 或「无法验证开发者」「Apple 无法检查其是否包含恶意软件」
+
+**推荐做法（任选其一）：**
+
+**方法一：右键打开（最简单）**
+
+1. 在「应用程序」中找到 **CalendarPlus**
+2. **按住 Control 键点击**（或右键）→ 选择 **打开**
+3. 在弹窗中再次点 **打开**（仅需首次确认一次）
+
+**方法二：系统设置**
+
+1. 先尝试双击打开一次（会被拦截）
+2. 打开 **系统设置** → **隐私与安全性**
+3. 在页面下方找到关于 CalendarPlus 的说明，点 **仍要打开**
+
+**方法三：终端移除隔离属性**
+
+若上述方式仍无效，在终端执行（将路径换成你的实际安装位置）：
+
+```bash
+xattr -cr /Applications/CalendarPlus.app
+```
+
+然后照常双击打开。
 
 > CI 会分别构建 **arm64** 与 **x86_64** 两个 DMG（非 Universal Binary）。打 `v*` 标签发布时，Release 中会附带固定文件名的 `CalendarPlus-arm64.dmg` 与 `CalendarPlus-x86_64.dmg`，便于 `releases/latest/download/...` 直链。
 
@@ -83,24 +116,32 @@ calendar-plus/
 ├── CalendarPlus/          # 应用核心库（UI、节假日、设置等）
 ├── CalendarPlusApp/       # 可执行入口
 ├── CalendarPlusTests/     # 单元 / UI 测试
-├── Brand/                 # 品牌 logo 源文件
+├── Brand/                 # logo-prepared.png（主源）；可选 logo.jpeg 回退
 ├── scripts/build-dmg.sh   # 分架构（arm64 / x86_64）DMG 打包脚本
 ├── website/               # 官网（Astro + React + Tailwind）
 ├── docs/                  # 设计说明、截图、手工验收清单
 └── .github/workflows/     # CI：构建并发布 DMG
 ```
 
-### 图标
+### 品牌与图标
 
-- **应用图标**：优先使用 `Brand/AppIcon.appiconset`（各尺寸 PNG）生成 `CalendarPlus/Resources/AppIcon.icns` 并打入 DMG；若该目录不完整，则回退到 `Brand/logo.jpeg`（脚本会自动裁掉留白、按 macOS squircle 铺满），预览图见 `Brand/logo-prepared.png`。
-- **菜单栏图标**：SF Symbol `calendar`（单色 template，随系统深浅色反色）。设置里「今日日期」模式显示当天数字。
+统一源文件为 **`Brand/logo-prepared.png`**（已带圆角与透明背景）。若无该文件，`scripts/generate-icons.swift` 会从 `Brand/logo.jpeg` 生成圆角预览并写入 `logo-prepared.png`。
 
-更新应用图标：
+| 用途 | 产物 / 位置 | 更新方式 |
+|------|-------------|----------|
+| 本 README 头图 | `Brand/logo-prepared.png` | 替换源文件后提交 |
+| 应用 / DMG / Dock | `CalendarPlus/Resources/AppIcon.icns` | 见下方命令；`build-dmg.sh` 打包前会自动执行 |
+| 官网 favicon 与顶栏 | `website/public/logo.png` 等 | `cd website && pnpm sync:logo`（见 [`website/README.md`](website/README.md)） |
+| 菜单栏 | SF Symbol `calendar`（template） | 代码内 `AppBrandResources`；设置可选「今日日期」数字 |
+
+更新应用图标（与 DMG 脚本相同逻辑）：
 
 ```bash
 swiftc scripts/generate-icons.swift -o /tmp/generate-icons -framework AppKit
 /tmp/generate-icons "$(pwd)"
 ```
+
+更换 logo 后建议同时执行上述命令与 `cd website && pnpm sync:logo`，再提交 `AppIcon.icns` 与 `website/public/` 中的 PNG。
 
 ### 测试
 
@@ -126,15 +167,17 @@ swift test --filter MonthGridViewRenderTests
 
 ## 官网
 
-静态营销站点位于 [`website/`](website/)，部署在 [Cloudflare Pages](https://calendar.caiden.asia)。本地开发：
+静态营销站点位于 [`website/`](website/)，线上地址 [calendar.caiden.asia](https://calendar.caiden.asia)，由 Cloudflare Pages 从 `website/` 构建部署。
 
 ```bash
 cd website
 pnpm install
-pnpm dev    # http://localhost:4321
+pnpm dev          # http://localhost:4321
+pnpm build        # 产出 dist/
+pnpm sync:logo    # 从 ../Brand/logo-prepared.png 同步 public/*.png
 ```
 
-详见 [`website/README.md`](website/README.md)。
+截图与 `docs/` 命名一致，可复制到 `website/public/screenshots/`（`dark.png`、`light.png`、`settings.png`）。构建、域名与 Pages 配置见 [`website/README.md`](website/README.md)。
 
 ## 文档
 
