@@ -103,12 +103,17 @@ build_dmg_for_arch() {
   local resources_dir="$contents_dir/Resources"
   local dmg_path="$OUT_DIR/${PRODUCT_NAME}-${VERSION}-${arch_label}.dmg"
   local bin_path="$BUILD_DIR/${arch}-apple-macosx/release/$EXECUTABLE_NAME"
+  local resource_bundle="$BUILD_DIR/${arch}-apple-macosx/release/CalendarPlus_CalendarPlus.bundle"
 
   echo "==> Building $EXECUTABLE_NAME for $arch ($arch_label)"
   swift build -c release --arch "$arch" --product "$EXECUTABLE_NAME"
 
   if [[ ! -x "$bin_path" ]]; then
     echo "Missing binary: $bin_path" >&2
+    exit 1
+  fi
+  if [[ ! -d "$resource_bundle" ]]; then
+    echo "Missing SPM resource bundle: $resource_bundle" >&2
     exit 1
   fi
 
@@ -119,6 +124,8 @@ build_dmg_for_arch() {
   cp "$bin_path" "$macos_dir/$PRODUCT_NAME"
   chmod +x "$macos_dir/$PRODUCT_NAME"
   cp "$APP_ICON" "$resources_dir/AppIcon.icns"
+  # Bundle.module resolves CalendarPlus_CalendarPlus.bundle at the .app root.
+  cp -R "$resource_bundle" "$app_dir/"
   write_info_plist "$contents_dir/Info.plist"
 
   echo "==> Creating DMG: $dmg_path"
